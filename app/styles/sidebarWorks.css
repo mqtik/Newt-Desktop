@@ -1,0 +1,22 @@
+.sidebarWorkListRowInfo {
+	float: left;
+	width: inherit;
+    padding: 7px 15px 0 15px;
+    display: grid;
+    height: 28px;
+    float: inherit;
+}
+.sidebarWorkListRowActions {
+
+}
+.sidebarWorkListRowStatus {
+	font-size: 11px;
+    text-transform: capitalize;
+    color: #333;
+}
+.sidebarWorkListRowTitle {
+	float: left;
+	    font-size: 13px;
+	    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+	font-weight: 600;
+}

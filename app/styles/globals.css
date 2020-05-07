@@ -1,0 +1,8 @@
+:root {
+        --circle-size: 60vh;
+        --circle-fallout: 70%;
+        --type-scale: 50vw;
+    }
+.white {
+  color: #fff;
+}
