@@ -9,13 +9,15 @@ import APIAuth from 'pouchdb-authentication'
 import APIFind from 'pouchdb-find'
 import APIUpsert from 'pouchdb-upsert'
 import _ from 'lodash'
-
+import Search from 'pouchdb-quick-search'
+import {parse, parseDefaults} from 'himalaya'
 //import DBDebug from 'pouchdb-debug';
 
 import { getLang, getLangString, Languages } from '../static/languages.tsx';
 
  PouchDB.plugin(APIAuth)
  .plugin(APIFind)
+ .plugin(Search)
  .plugin(APIUpsert);
 
 
@@ -26,10 +28,11 @@ const API_DRAFTS = process.env.API_URL+'/'+process.env.LOCAL_DB_DRAFTS;
 //import clone/node editor
 
 class API {
-  constructor({url}){
+  constructor(options){
     
-    console.log("Constructing API", url, getLangString())
-    this.url = url;
+    //console.log("Constructing API", getLangString())
+    
+
     this.endpoints = {};
     this.access_token = null;
     this.Auth = this.Auth.bind();
@@ -260,6 +263,12 @@ class API {
 
         let gc = await this.ApplicationChapters.get(currentChapter._id).catch(e => null);
 
+        if(!currentChapter.native_content){
+          let parsedDOM = await(this.Work().drafts().chapters().mapDOM(currentChapter.content))
+          console.log("parse dom!", parsedDOM)
+          gc.native_content = parsedDOM;
+        }
+
         let nT = {
           _id: currentChapter._id,
           book: book,
@@ -360,7 +369,7 @@ class API {
           let g1 = await this.OpenedWorks.get(currentChapter._id).catch(e => null);
 
           if(g1 != null){
-            g1.chapter.content = content;
+            g1.chapter.native_content = content;
             g1.changed = true;
             let pN = await this.OpenedWorks.put(g1).catch(e => null);
           }
@@ -373,6 +382,30 @@ class API {
 
           if(g1 != null){
             g1.chapter.title = title;
+            g1.changed = true;
+            let pN = await this.OpenedWorks.put(g1).catch(e => null);
+          }
+
+          //console.log("g1 save data!", g1)
+          return 'ok';
+      },
+      saveHeader: async(currentChapter, header) => {
+          let g1 = await this.OpenedWorks.get(currentChapter._id).catch(e => null);
+
+          if(g1 != null){
+            g1.chapter.header = header;
+            g1.changed = true;
+            let pN = await this.OpenedWorks.put(g1).catch(e => null);
+          }
+
+          //console.log("g1 save data!", g1)
+          return 'ok';
+      },
+      deleteHeader: async(currentChapter, header) => {
+          let g1 = await this.OpenedWorks.get(currentChapter._id).catch(e => null);
+
+          if(g1 != null){
+            g1.chapter.header = null;
             g1.changed = true;
             let pN = await this.OpenedWorks.put(g1).catch(e => null);
           }
@@ -408,7 +441,6 @@ class API {
 
           let toBulk = [];
 
-          console.log("cucrrent bulk1", currentBulk, sB)
 
           for (var i = sB.length - 1; i >= 0; i--) {
             console.log("book of!",  sB[i])
@@ -455,8 +487,6 @@ class API {
 
           let u = await(this.ApplicationDrafts.bulkDocs(toBulk));
 
-          console.log("save bulk!", u, toBulk, sB)
-
 
           
           return toBulk;
@@ -466,10 +496,21 @@ class API {
 
 
           let g1 = await this.ApplicationChapters.get(currentChapter._id).catch(e => null);
-          console.log("g1 save data!", currentChapter)
           if(g1 != null){
-            g1.title = currentChapter.chapter.title;
-            g1.content = currentChapter.chapter.content;
+            // g1.title = currentChapter.chapter.title;
+            // g1.native_content = currentChapter.chapter.native_content;
+            // g1.header = currentChapter.chapter.header;
+
+            if(g1.title != currentChapter.chapter.title){
+              g1.title = currentChapter.chapter.title;
+            }
+            if(g1.native_content != currentChapter.chapter.native_content){
+              g1.native_content = currentChapter.chapter.native_content;
+            }
+            if(g1.header != currentChapter.chapter.header){
+              g1.header = currentChapter.chapter.header;
+            }
+
             if(currentChapter.chapter._deleted && currentChapter.chapter._deleted == true){
               g1._deleted = true;
             }
@@ -477,7 +518,6 @@ class API {
             let pN = await this.ApplicationChapters.put(g1).catch(e => null);
 
             let g3 = await this.ApplicationChapters.get(currentChapter._id).catch(e => null);
-            console.log("save after put!", g3, pN)
 
 
             let g1e = await this.OpenedWorks.get(currentChapter._id).catch(e => null);
@@ -940,6 +980,7 @@ k
        drafts: () => {
 
         return {
+
           all: async() => {
             
             let k = await(this.Auth().getLoggedUser());
@@ -991,6 +1032,17 @@ k
               offset: d.offset,
               rows: r
             };
+          },
+          search: async(string) => {
+            console.log("SEARCH!", string)
+            let s = await this.ApplicationDrafts.search({
+              query: string,
+              fields: ['title', 'description', 'author', 'tags', 'status'],
+              include_docs: true
+            });
+            console.log("test!", s)
+            let r = s.rows.map(function (row) { return row.doc; });
+            return r;
           },
           replicateFrom: async() => {
             let k = await(this.Auth().getLoggedUser());
@@ -1097,13 +1149,14 @@ k
                   };
 
           let n = await(this.ApplicationDrafts.put(bookToCreate, {force: true}));
+          let nd = await(this.RemoteDrafts.put(bookToCreate, {force: true}));
 
           let g = await(this.ApplicationDrafts.get(n.id));
           let index = 0;
           let chaptersToCreate = await(flow.chapters.map(item => {
                                     item._id = bookId+'-chapter-'+(new Date()).getTime()+(index++);
                                     item.position = index;
-                                    item.content = item.content;
+                                    item.native_content = item.content;
                                     item._rev = undefined;
                                     //index++;
                                     item.bookId = bookId;
@@ -1125,6 +1178,7 @@ k
           },
           bulkIt: async(chapters) => {
             let u = await(this.ApplicationChapters.bulkDocs(chapters));
+            let c = await(this.RemoteChapters.bulkDocs(chapters));
 
             return u;
           },
@@ -1296,6 +1350,72 @@ k
                   attachments: false,
                   conflicts:true,
                   startkey: id+'-chapter-', endkey: id+'-chapter-\uffff'
+                }));
+                
+
+
+                /*if(c == null){
+                  console.log("FINDER IS NULL")
+                }*/
+                
+                let r = ad.rows.map((row) => { return row.doc; }); 
+                //console.log("[ad]", r)
+                //console.log("[get all books] user:", k.name)
+
+                r = _.orderBy(r, ['position'],['asc'])
+                /*console.log("[all first]", c)
+                if(c) {
+                  let n = await(this.ApplicationChapters.find({
+
+                          fields: ['position', 'bookId', 'title', 'archive', '_id'],
+                          selector: {
+                            bookId: { $eq: id },
+                          },
+                        }));
+                  console.log("[all next]", n)
+                  
+                }*/
+                //iconsole.log("FIND LOG", c)
+                //console.log("chapters!", id)
+
+                return {
+                  chapters: r,
+                  total: ad.total_rows,
+                  offset: ad.offset
+                };
+              },
+              allLocal: async(limit, offset) => {
+                
+                //console.log("get indexes!!!")
+                //var indexesResult = await this.ApplicationChapters.getIndexes();
+
+                //console.log("get indexes $1!!!", indexesResult)
+                //let erase = await(indexesResult.indexes.map(async row => { return await(this.ApplicationChapters.deleteIndex(row)) }));  
+                //console.log("get indexes $1!!!", erase)
+                //console.log("id of!", id)
+                let k = await(this.Auth().getLoggedUser());
+
+                /*let c = await(this.ApplicationChapters.find({
+
+                          fields: ['bookId', 'userId', 'position', 'title', 'archive', '_id'],
+                          selector: {
+                            bookId: {
+                              $eq: id
+                            },
+                            userId: {
+                              $eq: k.name
+                            }
+                            
+                          },
+                          use_index: '_my_chapters'
+                        })).catch(err => null);*/
+
+                let ad = await(this.ApplicationChapters.allDocs({
+                  include_docs: true,
+                  attachments: false,
+                  //conflicts:true,
+                  limit: limit,
+                  skip: offset
                 }));
                 
 
@@ -1581,6 +1701,179 @@ k
                 let g = await(this.ApplicationChapters.get(params._id));
                 return g;
               },
+              mapDOM: async(element) => {
+
+                if(typeof element === 'undefined'){
+                  let blocks = {
+                    time: Date.now(),
+                    blocks: []
+                   };
+                   return blocks;
+                }
+                const json = parse(element, { ...parseDefaults, includePositions: false });
+
+                const formatFromTagNameItems = (o, res) => {
+                  var items = res || [];
+                  if (o.type == 'text' && o.content.trim() === '') {
+                                      items.push(o.content);   // saving `name` value
+                                  } 
+                  if(o.children){
+                    for (var il = o.children.length - 1; il >= 0; il--) {
+                                
+                                if(o.children[il]){
+                                  formatFromTagNameItems(o.children[il], items)
+                                }
+
+                              }
+                  }
+
+
+
+                   
+                  return items;
+                }
+
+                const formatFromTagName = (o, res, tag) => {
+                  var items = res || [];
+
+                  if (o.type == 'text') {
+
+                       let co;
+                       if(tag == 'u'){
+                        co = '<u>'+o.content+'</u>';
+                       } else if(tag == 'i'){
+                        co = '<i>'+o.content+'</i>';
+                       } else if(tag == 'b' || tag == 'strong'){
+                        co = '<b>'+o.content+'</b>';
+                       } else {
+                        co = o.content;
+                       }
+                       if(typeof co == 'undefined'){
+                        co = ' ';
+                       }
+                      items.unshift(co);   // saving `name` value
+
+                    } 
+                  if(o.type == 'element' && tag == 'img' && o.attributes && o.attributes[0] && o.attributes[0].value){
+                    items.unshift({img: o.attributes[0].value})
+                  }
+
+                  if(o.children){
+
+                    for (var il = o.children.length - 1; il >= 0; il--) {    
+                                if(o.children[il]){
+
+                                  formatFromTagName(o.children[il], items, o.tagName)
+
+                                }
+                      }
+                  }
+                  
+                 
+
+
+                   
+                  return items;
+                }
+                const scrapeContent = (o, res, type) => {
+                  var names = res || [];
+
+                      for (var i = o.length - 1; i >= 0; i--) {
+                        
+
+                          if (o[i].type == 'text') {
+
+                                names.unshift({ type: 'paragraph', data: { text: o[i].content }});   // saving `name` value
+                            }
+
+                          if(o[i].children && typeof o[i].children === 'object') {
+                            if(o[i].tagName == 'ul' || o[i].tagName == 'ol'){
+                              let t = formatFromTagNameItems(o[i], [])
+                              names.unshift({ type: 'list', data: { text: t }});
+                            } else if(o[i].tagName == 'p') {
+                              let string = '';
+                              let pa = formatFromTagName(o[i], '', o[i].tagName);
+
+                               if(pa.length > 0){
+                                  pa = pa.map(w => { string += w; return w;})
+                                }
+                              names.unshift({ type: 'paragraph', data: { text: string }});
+                            } else if(o[i].tagName == 'img') {
+                              let string = '';
+                              let pa = formatFromTagName(o[i], '', o[i].tagName);
+
+                              if(pa && pa[0] && pa[0].img){
+                                names.unshift({ type: 'image', data: { 
+                                  "file": {
+                                    "url": pa[0].img,
+                                  },
+                                    "caption" : "",
+                                    "withBorder" : false,
+                                    "stretched" : false,
+                                    "withBackground" : false
+                                  }
+                                });
+                              }
+
+                            } else {
+                              scrapeContent(o[i].children, names);
+                            }
+                             
+                              
+                              
+
+  // processing nested `child` object
+
+                          } 
+
+
+                      }
+                      return names;
+                  }
+                let allTypes = scrapeContent(json, []);
+
+               /* function* flatten(array){
+                     for(const el of array){
+                       yield el;
+                       yield* flatten(el.children);
+                     }
+                  }
+                for(const el of flatten(yourdata)){
+                      //...
+                   }*/
+
+                const parseElementDOM = (element) => {
+                    if(typeof element === 'undefined'){
+                      return;
+                    }
+                    if(element.type){
+
+                    }
+                  }
+
+               
+
+               if(typeof json === 'undefined'){
+                return;
+               }
+
+               let blocks = {
+                time: Date.now(),
+                blocks: allTypes
+               };
+
+               
+
+              return blocks;
+              },
+              parseElementDOM: (element) => {
+                if(typeof element === 'undefined'){
+                  return;
+                }
+                if(element.type){
+
+                }
+              },
               addImgContent: async(params) => {
                   //console.log("lets start!")
                   let options = {
@@ -1589,9 +1882,9 @@ k
                       'Content-Type': 'application/json',
                       'Accept': 'application/json'
                     },
-                    body: params
+                    body: JSON.stringify(params)
                   };
-                  let h = await fetch(API_URL+"/api/creators/shouldUploadContentMedia", options);
+                  let h = await fetch(process.env.API_URL+"/api/creators/shouldUploadContentMedia", options);
                   //console.log("h!",h)
                   let r = await h.json();
                  // console.log("r!", r)
@@ -1620,9 +1913,9 @@ k
                 return n;*/
                 let u = await(this.ApplicationChapters.upsert(d._id, doc => {
                   //console.log("DOC HERE!", doc)
-                  if(params.content && params.content != null && params.content.length > 0){
+                  if(params.native_content && params.native_content != null && params.native_content.length > 0){
                    // console.log("content changed")
-                    doc.content = params.content;
+                    doc.native_content = params.native_content;
                   }
                   if(params.title && params.title != null){
                     doc.title = params.title;
@@ -1694,7 +1987,8 @@ k
                   metadata : {
                       email : email,
                       full_name : name,
-                      createdAt: Date.now()
+                      createdAt: Date.now(),
+                      platforms: ['desktop']
                       //likes : ['harry potter', 'la tregua', 'forrest gump\''],
                     }
                });

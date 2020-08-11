@@ -28,7 +28,7 @@ const manifest = path.resolve(dll, 'renderer.json');
 const requiredByDLLConfig = module.parent.filename.includes(
   'webpack.config.renderer.dev.dll'
 );
-
+  
 /**
  * Warn if the DLL is not built
  */
@@ -190,6 +190,23 @@ export default merge.smart(baseConfig, {
       }
     ]
   },
+  /*externals: [
+    // nodeExternals(),
+    {
+      react: {
+        root: 'React',
+        commonjs2: 'react',
+        commonjs: 'react',
+        amd: 'react'
+      },
+      'react-dom': {
+        root: 'ReactDOM',
+        commonjs2: 'react-dom',
+        commonjs: 'react-dom',
+        amd: 'react-dom'
+      }
+    }
+  ],*/
   resolve: {
     alias: {
       'react-dom': '@hot-loader/react-dom'
@@ -211,7 +228,9 @@ export default merge.smart(baseConfig, {
     new TypedCssModulesPlugin({
       globPattern: 'app/**/*.{css,scss,sass}'
     }),
-
+    new webpack.DefinePlugin({
+      __DEV__: process.env.NODE_ENV !== 'production'
+    }),
     new webpack.NoEmitOnErrorsPlugin(),
 
     /**
@@ -227,7 +246,7 @@ export default merge.smart(baseConfig, {
      * 'staging', for example, by changing the ENV variables in the npm scripts
      */
     new webpack.EnvironmentPlugin({
-      NODE_ENV: 'development'
+      NODE_ENV: 'development',
     }),
 
     new webpack.LoaderOptionsPlugin({

@@ -49,6 +49,7 @@
   -webkit-box-pack: justify;
           justify-content: space-between;
   margin-bottom: 1rem;
+  list-style: none;
   padding: 0;
   font-family: Raleway;
   width: 26rem;

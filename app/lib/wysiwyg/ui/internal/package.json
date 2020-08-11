@@ -1,5 +1,0 @@
-{
-  "main": "../dist/index.js",
-  "module": "../dist/ui.esm.js",
-  "typings": "../api/internal.d.ts"
-}

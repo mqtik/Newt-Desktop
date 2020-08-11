@@ -27,10 +27,25 @@ export default merge.smart(baseConfig, {
 
   output: {
     path: path.join(__dirname, '..', 'app/dist'),
-    publicPath: './dist/',
+    publicPath: '../dist/',
     filename: 'renderer.prod.js'
   },
-
+  /*externals: [
+    {
+      react: {
+        root: 'React',
+        commonjs2: 'react',
+        commonjs: 'react',
+        amd: 'react'
+      },
+      'react-dom': {
+        root: 'ReactDOM',
+        commonjs2: 'react-dom',
+        commonjs: 'react-dom',
+        amd: 'react-dom'
+      }
+    }
+    ],*/
   module: {
     rules: [
       // Extract all .global.css to style.css as is
@@ -145,7 +160,8 @@ export default merge.smart(baseConfig, {
           loader: 'url-loader',
           options: {
             limit: 10000,
-            mimetype: 'application/octet-stream'
+            mimetype: 'application/octet-stream',
+            name: '../dist/fonts/[name].[ext]'
           }
         }
       },
@@ -160,8 +176,9 @@ export default merge.smart(baseConfig, {
         use: {
           loader: 'url-loader',
           options: {
-            limit: 10000,
-            mimetype: 'image/svg+xml'
+            limit: 40000,
+            mimetype: 'image/svg+xml',
+
           }
         }
       },
@@ -174,13 +191,14 @@ export default merge.smart(baseConfig, {
   },
 
   optimization: {
+    minimize: true,
     minimizer: process.env.E2E_BUILD
       ? []
       : [
           new TerserPlugin({
-            parallel: true,
+            parallel: false,
             sourceMap: true,
-            cache: true
+            cache: false
           }),
           new OptimizeCSSAssetsPlugin({
             cssProcessorOptions: {
@@ -192,7 +210,6 @@ export default merge.smart(baseConfig, {
           })
         ]
   },
-
   plugins: [
     /**
      * Create global constants which can be configured at compile time.
@@ -203,10 +220,36 @@ export default merge.smart(baseConfig, {
      * NODE_ENV should be production so that modules do not perform certain
      * development checks
      */
+    new webpack.DefinePlugin({
+      __DEV__: process.env.NODE_ENV !== 'production'
+    }),
     new webpack.EnvironmentPlugin({
-      NODE_ENV: 'production',
+      NODE_ENV: JSON.stringify(process.env.NODE_ENV),
       DEBUG_PROD: false,
-      E2E_BUILD: false
+      E2E_BUILD: false,
+      API_URL: 'https://newt.keetup.com',
+      API_STATIC: 'https://static.newt.keetup.com',
+      API_STATIC1: 'https://static.newt.keetup.com',
+      API_STORAGE_CONTENTS: 'https://static.newt.keetup.com/contents',
+      PORT_API_DIRECT: 5984,
+      PORT_API: 9090,
+      DB_BOOKS: 'books',
+      LOCAL_DB_NAME: 'books',
+      SETTINGS_LOCAL_DB_NAME: 'UserSettings',
+      DB_DRAFTS: 'drafts',
+      LOCAL_DB_DRAFTS: 'drafts',
+      LOCAL_DB_NOTIFICATIONS: 'notifications',
+      LOCAL_DB_PUBLIC: 'public',
+      LOCAL_DB_USERS: 'users',
+      LOCAL_DB_CHAPTERS: 'chapters',
+      INDEX_NAME: 'BooksIndex',
+      OFFLINE_DB_NAME: 'offline',
+      GOOGLE_API_KEY: 'AIzaSyD9NGW5Zruc3V5uxZdDsAa8u8biQKkHQnY',
+      CLIENT_SECRET: 'xGbAhWL960HycCoboFNvKdhpWJxnLdxIs55Gjn95',
+      CLIENT_ID: 2,
+      APPLEID:'development@keetup.com',
+      APPLEIDPASS: 'axrn-zmbs-gczp-yars',
+      APPLEPROVIDER: '9ZJF7GJ4KP'
     }),
 
     new MiniCssExtractPlugin({

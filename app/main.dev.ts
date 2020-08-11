@@ -22,6 +22,15 @@ export default class AppUpdater {
   }
 }
 
+/*const { crashReporter } = require('electron')
+
+crashReporter.start({
+  productName: 'Newt',
+  companyName: 'Keetup',
+  submitURL: 'http://localhost:9090/crash/desktop',
+  uploadToServer: true
+})*/
+
 let mainWindow: BrowserWindow | null = null;
 
 if (process.env.NODE_ENV === 'production') {
@@ -56,17 +65,17 @@ const createWindow = async () => {
 
   mainWindow = new BrowserWindow({
     show: false,
-    width: 1024,
-    height: 728,
-    webPreferences:
-      process.env.NODE_ENV === 'development' || process.env.E2E_BUILD === 'true'
-        ? {
+    width: 465,
+    titleBarStyle: 'hidden',
+    transparent: true,
+    height: 650,
+    backgroundColor: '#111',
+    webPreferences:{
             nodeIntegration: true
           }
-        : {
-            preload: path.join(__dirname, 'dist/renderer.prod.js')
-          }
   });
+
+  //mainWindow.setResizable(false);
 
   mainWindow.loadURL(`file://${__dirname}/app.html`);
 
@@ -88,9 +97,14 @@ const createWindow = async () => {
     mainWindow = null;
   });
 
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show()
+  })
+
   const menuBuilder = new MenuBuilder(mainWindow);
   menuBuilder.buildMenu();
 
+  //mainWindow.webContents.openDevTools()
   // Remove this if your app does not use auto updates
   // eslint-disable-next-line
   new AppUpdater();
@@ -103,9 +117,9 @@ const createWindow = async () => {
 app.on('window-all-closed', () => {
   // Respect the OSX convention of having the application in memory even
   // after all windows have been closed
-  if (process.platform !== 'darwin') {
+  //if (process.platform !== 'darwin') {
     app.quit();
-  }
+  //}
 });
 
 app.on('ready', createWindow);

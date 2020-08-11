@@ -1,7 +1,7 @@
 .newtSidebar {
-  background-color: #e2e4e6;
+  background-color: #232323;
   height: 100%;
-  color: #000;
+  color: #c1c1c1;
   overflow-x: hidden;
 }
 
@@ -20,11 +20,11 @@
     position: fixed;
     z-index: 1;
     width: 100%;
-    background-color: rgba(255, 255, 255, 0.45);
+    background-color: rgba(82, 82, 82, 0.29);
     backdrop-filter: saturate(180%) blur(20px);
-    border-bottom: 1px solid #efefef;
+    border-bottom:1px solid rgba(239, 239, 239, 0.05);
     padding: 25px 7px 7px 7px;
-    overflow: hidden;
+
     display: -webkit-box;
     flex-direction: column;
     overflow: hidden;
@@ -39,7 +39,7 @@
 	width: 29px;
     height: 27px;
     max-height: 27px;
-    background-color: #eaeaea;
+    background-color: rgba(234, 234, 234, 0.15);
     border-radius: 50%;
     text-align: center;
     padding-top: 2px;
@@ -61,7 +61,7 @@
 	padding: 5px 0px 0 15px;
 	font-weight: 700;
     text-align: left;
-    font-family: Raleway;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
 }
 .sidebarChapters {
 	width: 100%;
@@ -71,4 +71,11 @@
 .sidebarButtonCircle span {
 	margin-top: 10px;
     vertical-align: -webkit-baseline-middle;
+}
+
+.newTabNavbar {
+  position: fixed;
+    top: 55px;
+    left: 17px;
+    z-index: 999;
 }

@@ -11,19 +11,18 @@ import Icon, { Feather } from 'react-web-vector-icons';
 
 import _ from 'lodash';
 
+import ContextMenuArea from "./contextMenuArea";
+
 const Remote = new API({ url: process.env.API_URL })
 
 import Popover, { ArrowContainer } from 'react-tiny-popover'
 
 import { Flipper, Flipped } from "react-flip-toolkit";
 
-import memoize from 'memoize-one';
-
-import { FixedSizeList as List, areEqual } from 'react-window';
 
 import FlatList from 'flatlist-react';
 
-import svg1 from '../assets/illus/illustration_100.svg';
+import svg1 from '../assets/illus/illustration_9.svg';
 
 import update from 'immutability-helper'
 
@@ -39,7 +38,7 @@ export default class SidebarWorks extends Component<Props> {
 			isPopoverOpen: false,
 
 
-			items: 50,
+			items: 80,
       		loadingState: false
 		}
 
@@ -48,7 +47,6 @@ export default class SidebarWorks extends Component<Props> {
 
 	}
 	componentDidMount(){
-		console.log("this props synced docs!", this.props)
 		//this.workScroll.addEventListener("scroll", this.handleScroll);
 		 Remote.ApplicationDrafts.changes({live: true, since: 'now', include_docs: true})
 	                .on('change', (change) => {
@@ -119,17 +117,43 @@ export default class SidebarWorks extends Component<Props> {
 
 		this.props.onSelectBook(book);
 	}
+
+	_renderOptions = (key) => {
+		const itemsSettings = [
+						{
+					      label: "Settings",
+					      click: () => this.props.openBookSettings(key)
+					    },
+					    {
+					      label: "Select",
+					      click: () => this.props.onSelectBook(key)
+					    }
+					  ];
+		return(
+		<ContextMenuArea menuItems={itemsSettings}>
+						  	<div className={['sidebarWorkListRowActions', 'sidebarWorkActionsChapters'].join(" ")}>
+						  			<Icon
+											  name='dots-two-vertical'
+											  font='Entypo'
+											  color='#fff'
+											  size={25}
+											/>
+							</div>
+					    </ContextMenuArea>
+			);
+	}
 	_renderWorkRow = (key) => {
 
 		//key = this.state.works[key.index];
 
 		//console.log("KEY OF WORK ROW", this.props.syncedDocs, key._id, this.props.syncedDocs.includes(key._id))
+		
 		return (
 			<li key={key._id} className={'sidebarWorkList'}>
 			     <div className={'sidebarWorkListRow'}>
-			     <div  onClick={() => this.props.openWork(key)} style={{ display: 'inline-flex', float: 'inherit',minWidth: 200}}>
-			     	<Flipped flipId={key._id} stagger>
-				     	<div style={{backgroundImage: 'url('+key.cover+')'}} className={'coverAvatarSidebar'}></div>
+			     <div  onClick={() => this.props.openWork(key)} style={{ display: 'inline-grid', float: 'inherit',minWidth: 146}}>
+			     	<Flipped flipId={key._id} translate>
+				     	<div style={{'--img': key.cover && 'url(\''+key.cover.replace(/ /g, "%20")+'\')'}} className={['coverAvatarSidebar', 'sqr'].join(" ")}></div>
 				     </Flipped>
 				     <div className={sidebarWorksStyles['sidebarWorkListRowInfo']}>
 				     	<div className={['truncate', sidebarWorksStyles['sidebarWorkListRowTitle']].join(' ')}>{key.title}</div>
@@ -141,63 +165,11 @@ export default class SidebarWorks extends Component<Props> {
 				     </div>
 				     {
 				     	(this.props.selectedWorks == null) && 
-				     	<Popover
-							    isOpen={key.openSettings}
-							    position={'left'} // preferred position
-							    transitionDuration={0}
-							    onClickOutside={() => this.toggleSettings(key)}
-							    content={({ position, targetRect, popoverRect }) => (
-							        <ArrowContainer // if you'd like an arrow, you can import the ArrowContainer!
-							            position={'left'}
-							            targetRect={targetRect}
-							            popoverRect={popoverRect}
-							            arrowColor={'#232323'}
-							            arrowSize={10}
-							            arrowStyle={{ opacity: 1 }}
-							        >
-							            <div
-							                style={{ backgroundColor: '#232323', border: '1px solid #242424', boxShadow: '0px 0px 20px -9px rgba(0,0,0,0.75)', borderRadius:4, padding: 0, opacity: 1, width: 100, height: 30, display: 'table-cell' }}
-							                onClick={() => key.openSettings = true}
-							            >
-							            	<ul className={'popoverNewt'}>
-								            	<li onClick={() => this.props.openBookSettings(key)}>
-								            		<Icon
-																			  name='death-star'
-																			  font='MaterialCommunityIcons'
-																			  color='#fff'
-																			  size={18}
-																			  // style={{}}
-																			/>
-								            		<span>Settings</span>
-								            	</li>
-								            	<li onClick={() => this.props.onSelectBook(key)}>
-								            		<Icon
-																			  name='circle-slice-8'
-																			  font='MaterialCommunityIcons'
-																			  color='#fff'
-																			  size={18}
-																			  // style={{}}
-																			/>
-													<span>Select</span>
-												</li>
-								            </ul>
-							            </div>
-							        </ArrowContainer>    )}
-							>
-								
-
-							<div className={'sidebarWorkListRowActions'}  onClick={() => this.toggleSettings(key)}><Icon
-							  name='dots-two-vertical'
-							  font='Entypo'
-							  color='#111'
-							  size={25}
-							  // style={{}}
-							/></div>
-							</Popover>
+				     	this._renderOptions(key)
 				     }
 				     
 				     {(this.props.selectedWorks != null) && 
-				     	<div className={'sidebarWorkListRowActions'} style={{paddingRight: 10}}>
+				     	<div className={['sidebarWorkListRowActions', 'sidebarWorkActionsChapters'].join(" ")} style={{paddingRight: 10}}>
 				     	{/*<div className="custom-checkbox">
 						  <input className="custom-checkbox-input" type="checkbox" id={"custom-checkbox-discovery"+key._id}/>
 						  <label className="custom-checkbox-label" for={"custom-checkbox-discovery"+key._id}>
@@ -282,76 +254,55 @@ export default class SidebarWorks extends Component<Props> {
 	}
 	_renderSpecificWork = () => {
 		let key = this.props.currentWork;
+
 		return (
-			<div>
-			<div className={'sidebarWorkList'} style={key._deleted && {display: 'none'}}>
+			<div style={{display: 'inline-flex', width: 700}}>
+			<div className={['sidebarWorkList', 'sidebarWorkListChapters'].join(" ")} style={key._deleted && {display: 'none'}}>
 			     <div className={'sidebarWorkListRow'}>
-			     <div onClick={() => this.props.closeWork(key)}>
-			     	<Flipped flipId={key._id} stagger>
-				     	<div style={{backgroundImage: 'url('+key.cover+')'}} className={'coverAvatarSidebar'}></div>
+			     <div style={{display: 'table-caption'}}>
+			     	<Flipped flipId={key._id} translate>
+				     	<div style={{'--img': key.cover && 'url(\''+key.cover.replace(/ /g, "%20")+'\')'}} className={['coverAvatarSidebar', 'sqr'].join(" ")}></div>
 				     </Flipped>
-				     <div className={sidebarWorksStyles['sidebarWorkListRowInfo']}>
-				     	<div className={['truncate', sidebarWorksStyles['sidebarWorkListRowTitle']].join(' ')}>{key.title}</div>
-				     </div>
-				     </div>
-				     <Popover
-							    isOpen={key.openSettings}
-							    position={'left'} // preferred position
-							    transitionDuration={0}
-							    onClickOutside={() => this.toggleSettings(key)}
-							    content={({ position, targetRect, popoverRect }) => (
-							        <ArrowContainer // if you'd like an arrow, you can import the ArrowContainer!
-							            position={'left'}
-							            targetRect={targetRect}
-							            popoverRect={popoverRect}
-							            arrowColor={'#232323'}
-							            arrowSize={10}
-							            arrowStyle={{ opacity: 1 }}
-							        >
-							            <div
-							                style={{ backgroundColor: '#232323', border: '1px solid #242424', boxShadow: '0px 0px 20px -9px rgba(0,0,0,0.75)', borderRadius:4, padding: 0, opacity: 1, width: 100, height: 30, display: 'table-cell' }}
-							                onClick={() => key.openSettings = true}
-							            >
-							            	<ul className={'popoverNewt'}>
+				     <div className={sidebarWorksStyles['sidebarWorkListRowStatus']} style={{margin: 10, display: 'initial'}}>
+				     		{key.status ? key.status : 'Private'}
+				     		{ (key._deleted == true) && ' (deleted)' }
+				     	</div>
+				     	<ul className={'popoverNewt'} style={{marginLeft: 0}}>
 							            		<li onClick={() => this.props.onCreateChapter()}>
 								            		<Icon
-																			  name='plus'
-																			  font='MaterialCommunityIcons'
-																			  color='#fff'
-																			  size={18}
-																			  // style={{}}
-																			/>
-								            		<span>Add</span>
+													  name='plus'
+													  font='MaterialCommunityIcons'
+													  color='#dadada'
+													  size={18}
+													  // style={{}}
+													/>
+								            		<span>Add chapter</span>
 								            	</li>
 								            	<li onClick={() => this.props.openBookSettings(key)}>
 								            		<Icon
-																			  name='death-star'
-																			  font='MaterialCommunityIcons'
-																			  color='#fff'
-																			  size={18}
-																			  // style={{}}
-																			/>
+													  name='death-star'
+													  font='MaterialCommunityIcons'
+													  color='#dadada'
+													  size={18}
+													  // style={{}}
+													/>
 								            		<span>Settings</span>
 								            	</li>
 								            </ul>
-							            </div>
-							        </ArrowContainer>    )}
-							>
-								
-
-							<div className={'sidebarWorkListRowActions'}  onClick={() => this.toggleSettings(key)}><Icon
-							  name='dots-two-vertical'
-							  font='Entypo'
-							  color='#111'
-							  size={25}
-							  // style={{}}
-							/></div>
-							</Popover>
+				     </div>
+				    
 							
 			     	
 				</div>
 			</div>
-				<SidebarChapters onUpdatedOrInsertedChapter={this.props.onUpdatedOrInsertedChapter.bind(this)} onMoveChapters={(chapters) => this.props.onMoveChapters(chapters)} toggleSettingsChapters={(key) => this.props.toggleSettingsChapters(key)} onCreateChapter={() => this.props.onCreateChapter()} chapters={this.props.chapters} openChapter={this.props.openChapter.bind(this)} currentWork={key} rootUser={this.props.rootUser}/>
+				<div style={{ display: 'inline-block', width: '100%', padding: 10}}>
+				<div className={sidebarWorksStyles['sidebarWorkListRowInfo']}>
+				     	<div className={['truncate', sidebarWorksStyles['sidebarWorkListRowTitle'],sidebarWorksStyles['specificWorkSize']].join(' ')}>{key.title}</div>
+				     	
+				     </div>
+				 
+					<SidebarChapters onUpdatedOrInsertedChapter={this.props.onUpdatedOrInsertedChapter.bind(this)} onMoveChapters={(chapters) => this.props.onMoveChapters(chapters)} toggleSettingsChapters={(key) => this.props.toggleSettingsChapters(key)} onCreateChapter={() => this.props.onCreateChapter()} chapters={this.props.chapters} openChapter={this.props.openChapter.bind(this)} currentWork={key} rootUser={this.props.rootUser}/>
+				</div>
 			</div>
 
 			)
@@ -359,7 +310,7 @@ export default class SidebarWorks extends Component<Props> {
 
 	sliceMoreWork = async() => {
 		//console.log("slice more work!",this.state.items, this.state.items+50)
-		let it = parseFloat(this.state.items+50);
+		let it = parseFloat(this.state.items+80);
 		this.setState({
 			items: it
 		})
@@ -391,11 +342,11 @@ export default class SidebarWorks extends Component<Props> {
 	 if(this.state.rootUser != null){
 	 	const flatRef = createRef();
 	 	return (
-	  	<div ref={div => (this.workScroll = div)} onScroll={() => this.handleScroll}  style={{backgroundColor: '#e2e4e6', width: '100%', padding: 0, position: 'absolute'}}>
+	  	<div ref={div => (this.workScroll = div)} onScroll={() => this.handleScroll}  style={{ width: 'fit-content', margin: '0 auto', padding: 0}}>
 
 
 
-	  		<Flipper  flipKey={this.props.currentSection} spring='square' className="staggered-list-content" style={{paddingBottom: 0, display: 'grid'}}>
+	  		<Flipper  flipKey={this.props.currentSection} spring='noWobble' className="staggered-list-content" style={{paddingBottom: 0, display: 'grid'}}>
 	  		{	this.props.currentSection == 'chapters' &&
 	  			this.props.currentWork != null && 
 	  			this._renderSpecificWork()
@@ -418,21 +369,21 @@ export default class SidebarWorks extends Component<Props> {
 					  filterBy={this.handleFilter}
 					  wrapperHtmlTag="ul"
 					  hasMoreItems={true}
-					  renderWhenEmpty={() => <div className={'noOpensFiles'} style={{display: 'initial', minWidth: 400, maxWidth: 500, padding: 15}}>
+					  renderWhenEmpty={() => <div className={'noOpensFiles'} style={{display: 'inline-flex', minWidth: 400, maxWidth: 500, padding: 15}}>
 
-				  		<div style={{width: '60%', textAlign: 'left'}}>
-				  			<h3>1. Add books and articles</h3>
-				  			<p>Add/import books, write chapters and articles.<br /></p>
-				  			<a className={'bdashed'} onClick={() => this.props.onCreateWork()}>Create my first book</a>
-				  		</div>
-				  		<div style={{width: '60%', textAlign: 'left'}}>
-				  			<h3>2. Sychronization</h3>
-				  			<p>When you're done writing, save it and it will be backed up on the cloud. Your phone will be aware of the changes, so all your devices will eventually be in sync.
-				  				Everything is offline first, with the option to use the cloud to store versions.<br /></p>
-				  		</div>
-				  		<div style={{width: '60%', textAlign: 'left'}}>
-				  			<h3>3. Write your story</h3>
-				  			<p>Private by default, published by choice. Your story has a place here.</p>
+				  		<div style={{width: '100%', textAlign: 'center'}}>
+
+
+				  			<h3>Start on Newt</h3>
+				  			<p>Add/import books, write interactive chapters and articles with a powerful editor.<br /></p>
+
+				  			<a className={'bdashed'} onClick={() => this.props.onCreateWork()}>Create your first book</a><br/>
+				  			<object type="image/svg+xml" data={svg1} style={{marginTop:50,height: 200}}>
+			                    Your browser does not support SVG
+			                  </object>
+				  			
+
+
 				  		</div>
 				  	</div>}
 					  ref={this.listRef}
@@ -442,7 +393,7 @@ export default class SidebarWorks extends Component<Props> {
 
 	  		}
 	  		{(this.props.currentSection == 'works' && typeof this.props.works !== 'undefined' && this.props.works.length > this.state.items) &&
-	  		<button className={['buttonShine', 'bookRowButton'].join(' ')} onClick={() => this.sliceMoreWork()} style={{margin:'0 auto', marginBottom: 15, padding: '5px 10px 7px 10px'}}>
+	  		<button className={['buttonShine', 'bookRowButton'].join(' ')} onClick={() => this.sliceMoreWork()} style={{alignItems: 'center', justifyContent: 'center', width: '90%', marginLeft:'5%', marginBottom: 15, padding: '5px 10px 7px 10px'}}>
 													<Icon
 														 name='download-cloud'
 														 font='Feather'

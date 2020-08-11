@@ -19,11 +19,15 @@ import arrayMove from 'array-move';
 
 import ContentLoader from "react-content-loader" 
 
+import svg1 from '../assets/illus/illustration_58.svg';
+
 const SortableItem = sortableElement(({value, openChapter}) => {
 
 	return (
 		<li>
-		  	<div key={value._id} style={value._deleted && {display: 'none'}} className={sidebarChaptersStyle['sidebarWorkChapterList']}>
+		  	<div key={value._id} 
+		  		//style={value._deleted && {display: 'none'}} 
+		  		className={sidebarChaptersStyle['sidebarWorkChapterList']}>
 				<div className={sidebarChaptersStyle['titleChapter']} onClick={() => openChapter(value)}>
 					{value.title} {value._deleted && ' (deleted)'}
 				</div>
@@ -88,7 +92,7 @@ export default class SidebarChapters extends Component<Props> {
 	}
 
 	_renderSingleChapter = (key) => {
-		console.log("key!", key)
+		//console.log("key!", key)
 		return (
 			<div key={key._id} className={sidebarChaptersStyle['sidebarWorkChapterList']}>
 				<div className={sidebarChaptersStyle['titleChapter']} onClick={() => this.props.openChapter(key, this.state.currentWork)}>{key.title}</div>
@@ -115,7 +119,7 @@ export default class SidebarChapters extends Component<Props> {
 								            		<Icon
 																			  name='death-star'
 																			  font='MaterialCommunityIcons'
-																			  color='#fff'
+																			  color='#dadada'
 																			  size={18}
 																			  // style={{}}
 																			/>
@@ -139,12 +143,21 @@ export default class SidebarChapters extends Component<Props> {
 		)
 	}
 	_renderChapters = () => {
-		return (<SortableContainer onSortEnd={this.onSortEnd} useDragHandle>
+		return (<SortableContainer 
+				onSortEnd={this.onSortEnd} 
+				hideSortableGhost={false}
+				useDragHandle={true}>
 	        {
 	        	this.props.chapters.map((value, index) => {
 
 	        		return (
-	        			<SortableItem key={`item-${value._id}`} index={index} value={value} toggleSettingsChapters={(value) => this.props.toggleSettingsChapters(value)} openChapter={(value) => this.props.openChapter(value, this.state.currentWork)}/>
+	        			<SortableItem 
+	        				key={value._id} 
+	        				index={index} 
+	        				disabled={false}
+	        				value={value} 
+	        				toggleSettingsChapters={(value) => this.props.toggleSettingsChapters(value)} 
+	        				openChapter={(value) => this.props.openChapter(value, this.state.currentWork)}/>
 	        		)
 
 		        })
@@ -163,7 +176,7 @@ export default class SidebarChapters extends Component<Props> {
 			k.position = i;
 			return k;
 		})
-		console.log("nc!", nc)
+		__DEV__ && console.log("nc!", nc)
 		this.props.onMoveChapters(nc);
 
 		return;
@@ -172,7 +185,18 @@ export default class SidebarChapters extends Component<Props> {
 	render(){
 	 if(this.props.chapters != null){
 	 	return (
-	  	<div style={{width: '100%', height: '100%'}}>
+	  	<div className={'chaptersSection'}>
+	  		{
+	  			this.props.chapters && this.props.chapters.length == 0 &&
+	  			<div style={{textAlign:'center'}}>
+	  				<h3>This book has no chapters.</h3>
+				    <p>You can create chapters in the left panel</p>
+
+				    <object type="image/svg+xml" data={svg1} style={{marginTop:50,height: 200}}>
+			                    Your browser does not support SVG
+			                  </object>
+				</div>
+	  		}
 	  		{
 	  			this._renderChapters()
 	  		}
@@ -181,18 +205,18 @@ export default class SidebarChapters extends Component<Props> {
 	 } else {
 	 	return (
 	  	<div style={{width: '100%', height: '100%'}}>
-	  		<div style={{padding: 10,height: 58}} key={Math.random()}>
+	  		<div style={{padding: 0,height: 58}} key={Math.random()}>
 				  						<ContentLoader 
 															    speed={2}
-															    width={400}
+															    width={490}
 															    height={160}
-															    viewBox="0 0 400 160"
-															    backgroundColor="#555"
-															    foregroundColor="#ecebeb"
+															    viewBox="0 0 535 160"
+															    backgroundColor="#333"
+															    foregroundColor="#444"
 															  >
-															     <rect x="6" y="3" rx="3" ry="3" width="100%" height="46" /> 
-																    <rect x="6" y="54" rx="3" ry="3" width="100%" height="46" /> 
-																    <rect x="6" y="105" rx="3" ry="3" width="100%" height="46" />
+															     <rect x="6" y="3" rx="10" ry="10" width="535" height="46" /> 
+																    <rect x="6" y="54" rx="10" ry="10" width="535" height="46" /> 
+																    <rect x="6" y="105" rx="10" ry="10" width="535" height="46" />
 															  </ContentLoader></div>
 
 		</div>

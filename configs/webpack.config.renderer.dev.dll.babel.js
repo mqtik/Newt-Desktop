@@ -45,6 +45,9 @@ export default merge.smart(baseConfig, {
       path: path.join(dist, '[name].json'),
       name: '[name]'
     }),
+    new webpack.DefinePlugin({
+      __DEV__: process.env.NODE_ENV !== 'production'
+    }),
 
     /**
      * Create global constants which can be configured at compile time.
@@ -56,7 +59,7 @@ export default merge.smart(baseConfig, {
      * development checks
      */
     new webpack.EnvironmentPlugin({
-      NODE_ENV: 'development'
+      NODE_ENV: 'development',
     }),
 
     new webpack.LoaderOptionsPlugin({

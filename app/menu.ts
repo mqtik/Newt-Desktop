@@ -7,6 +7,15 @@ import {
   MenuItemConstructorOptions
 } from 'electron';
 
+/*const { crashReporter } = require('electron')
+
+crashReporter.start({
+  productName: 'Newt',
+  companyName: 'Keetup',
+  submitURL: 'http://localhost:9090/crash/desktop',
+  uploadToServer: true
+})*/
+
 export default class MenuBuilder {
   mainWindow: BrowserWindow;
 
@@ -50,10 +59,10 @@ export default class MenuBuilder {
 
   buildDarwinTemplate() {
     const subMenuAbout: MenuItemConstructorOptions = {
-      label: 'Electron',
+      label: 'Newt',
       submenu: [
         {
-          label: 'About ElectronReact',
+          label: 'About Newt',
           // @ts-ignore
           selector: 'orderFrontStandardAboutPanel:'
         },
@@ -61,7 +70,7 @@ export default class MenuBuilder {
         { label: 'Services', submenu: [] },
         { type: 'separator' },
         {
-          label: 'Hide ElectronReact',
+          label: 'Hide Newt',
           accelerator: 'Command+H',
           selector: 'hide:'
         },
@@ -156,7 +165,7 @@ export default class MenuBuilder {
         {
           label: 'Learn More',
           click() {
-            shell.openExternal('https://electronjs.org');
+            shell.openExternal('https://newt.to');
           }
         },
         {
