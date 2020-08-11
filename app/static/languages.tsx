@@ -415,7 +415,7 @@ export const Languages = {
         }
     };
 
-export const getLang = function () {
+export const getLang = () => {
   let locale: string;
   // iOS
  
@@ -424,7 +424,7 @@ export const getLang = function () {
   return 'en';
 }
 
-export const getLangString = function () {
+export const getLangString = () => {
   let locale: string;
   // iOS
   //console.log("is eglish", locale.includes("en"), locale.includes("es"))

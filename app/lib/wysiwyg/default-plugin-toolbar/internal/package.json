@@ -1,5 +1,0 @@
-{
-  "main": "../dist/index.js",
-  "module": "../dist/default-plugin-toolbar.esm.js",
-  "typings": "../api/internal.d.ts"
-}

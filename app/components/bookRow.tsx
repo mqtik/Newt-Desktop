@@ -18,7 +18,7 @@ import ReactTooltip from 'react-tooltip'
 
 import ToggleDisplay from 'react-toggle-display';
 
-
+import ContextMenuArea from "./contextMenuArea";
 
 import _ from 'lodash'
 
@@ -75,158 +75,90 @@ export default class BookRow extends Component<Props> {
     }
 
 	_renderAdd = (key) => {
-		return (
-			<Popover
-							    isOpen={this.state.isAddOpen}
-							    position={'bottom'} // preferred position
-							    transitionDuration={0}
-							    onClickOutside={() => this.setState({ isAddOpen: false })}
-							    content={({ position, targetRect, popoverRect }) => (
-							        <ArrowContainer // if you'd like an arrow, you can import the ArrowContainer!
-							            position={'bottom'}
-							            targetRect={targetRect}
-							            popoverRect={popoverRect}
-							            arrowColor={'#232323'}
-							            arrowSize={10}
-							            arrowStyle={{ opacity: 1 }}
-							        >
-							            <div
-							                style={{ backgroundColor: '#232323', border: '1px solid #242424', boxShadow: '0px 0px 20px -9px rgba(0,0,0,0.75)', borderRadius:4, padding: 0, opacity: 1, width: 100, height: 30,  display: 'table-cell' }}
-							                onClick={() => this.setState({ isAddOpen: !this.state.isAddOpen })}
-							            >
-							            	<ul className={'popoverNewt'}>
-							            	
+		const itemsAdd = [
+					    {
+					      label: "Description",
+					      click: () => this.addField('description')
+					    },
+					    {
+					      label: "Author",
+					      click: () => this.addField('author')
+					    },
+					    {
+					      label: "Tags",
+					      click: () => this.addField('tags')
+					    },
+					    {
+					      label: "Picked",
+					      click: () => this.setPicked(key)
+					    }
+					  ];
 
-									            <ToggleDisplay if={!key.title} onClick={() => this.addField('title')}>
-									            	<li>
-									            		<span>Title</span>
-									            	</li>
-									            </ToggleDisplay>
-									            <ToggleDisplay if={!key.description} onClick={() => this.addField('description')}>
-									            	<li>
-									            		<span>Description</span>
-									            	</li>
-									            </ToggleDisplay>
-									            <ToggleDisplay if={!key.author} onClick={() => this.addField('author')}>
-									            	<li>
-									            		<span>Author</span>
-									            	</li>
-									            </ToggleDisplay>
-									            <ToggleDisplay if={!key.tags} onClick={() => this.addField('tags')}>
-									            	<li>
-									            		<span>Tags</span>
-									            	</li>
-									            </ToggleDisplay>
-									            <ToggleDisplay if={!key.picked} onClick={() => this.setPicked(key)}>
-									            	<li>
-									            		<span>Picked</span>
-									            	</li>
-									            </ToggleDisplay>
-											
-								            </ul>
-							            </div>
-							        </ArrowContainer>    )}
-							>
-						
-							    <button className={['badge'].join(' ')} style={{height:'28px',border: 0}} onClick={() => this.setState({ isAddOpen: !this.state.isAddOpen })}>
-											<span>Add</span>
-								</button>
-							</Popover>
-							);
+		return (
+			<ContextMenuArea menuItems={itemsAdd}>
+			  	<button className={['badge'].join(' ')} style={{height:'29px',border: 0}}>
+					<span>Add</span>
+				</button>
+		    </ContextMenuArea>
+		);
 	}
 
 	_renderStatus = (key) => {
-		return (
-			<Popover
-							    isOpen={this.state.isStatusOpen}
-							    position={'bottom'} // preferred position
-							    transitionDuration={0}
-							    onClickOutside={() => this.setState({ isStatusOpen: false })}
-							    content={({ position, targetRect, popoverRect }) => (
-							        <ArrowContainer // if you'd like an arrow, you can import the ArrowContainer!
-							            position={'bottom'}
-							            targetRect={targetRect}
-							            popoverRect={popoverRect}
-							            arrowColor={'#232323'}
-							            arrowSize={10}
-							            arrowStyle={{ opacity: 1 }}
-							        >
-							            <div
-							                style={{ backgroundColor: '#232323', border: '1px solid #242424', boxShadow: '0px 0px 20px -9px rgba(0,0,0,0.75)', borderRadius:4, padding: 0, opacity: 1, width: 100, height: 30,  display: 'table-cell' }}
-							                onClick={() => this.setState({ isStatusOpen: !this.state.isStatusOpen })}
-							            >
-							            	<ul className={'popoverNewt'}>
-								            	<li onClick={() => this.changeStatus('private', key)}>
 
-								            		<span>Private</span>
-								            	</li>
-								            	<li onClick={() => this.changeStatus('public', key)}>
-													<span>Public</span>
-												</li>
-												<li style={{background: '#ff7575', color: '#fff'}} onClick={() => this.setDeleted(key)}>
-													<span>Delete</span>
-												</li>
-												
-								            </ul>
-							            </div>
-							        </ArrowContainer>    )}
-							>
-						
-							    
-								<div className={['badge', key.status == 'public' && 'badgePublic'].join(" ")} onClick={() => this.setState({ isStatusOpen: !this.state.isStatusOpen })}>
-												<span>
-													{(!key._deleted && key.status) && key.status}
-													{(!key.status && !key._deleted) && 'Private'}
-													{key._deleted && 'Deleted'}
-												</span>
-											</div>
-							</Popover>
-							);
+		const itemsSettings = [
+						{
+					      label: "Private",
+					      click: () => this.changeStatus('private', key)
+					    },
+					    {
+					      label: "Public",
+					      click: () => this.changeStatus('public', key)
+					    },
+					    {
+					      label: "Delete",
+					      click: () => this.setDeleted(key)
+					    }
+					  ];
+	 	
+	  		
+
+		return (
+			<ContextMenuArea menuItems={itemsSettings}>
+			  	<div className={['badge', key.status == 'public' && 'badgePublic'].join(" ")}>
+													<span>
+														{(!key._deleted && key.status) && key.status}
+														{(!key.status && !key._deleted) && 'Private'}
+														{key._deleted && 'Deleted'}
+													</span>
+												</div>
+		    </ContextMenuArea>
+		);
 	}
 
 	_renderLanguage = (key) => {
-		return (
-			<Popover
-							    isOpen={this.state.isLangOpen}
-							    position={'bottom'} // preferred position
-							    transitionDuration={0}
-							    onClickOutside={() => this.setState({ isLangOpen: false })}
-							    content={({ position, targetRect, popoverRect }) => (
-							        <ArrowContainer // if you'd like an arrow, you can import the ArrowContainer!
-							            position={'bottom'}
-							            targetRect={targetRect}
-							            popoverRect={popoverRect}
-							            arrowColor={'#232323'}
-							            arrowSize={10}
-							            arrowStyle={{ opacity: 1 }}
-							        >
-							            <div
-							                style={{ backgroundColor: '#232323', border: '1px solid #242424', boxShadow: '0px 0px 20px -9px rgba(0,0,0,0.75)', borderRadius:4, padding: 0, opacity: 1, width: 100, height: 30,  display: 'table-cell' }}
-							                onClick={() => this.setState({ isLangOpen: !this.state.isLangOpen })}
-							            >
-							            	<ul className={'popoverNewt'}>
-								            	<li onClick={() => this.changeLanguage('es', key)}>
+		const itemsLanguages = [
+						{
+					      label: "Español",
+					      click: () => this.changeLanguage('es', key)
+					    },
+					    {
+					      label: "English",
+					      click: () => this.changeLanguage('en', key)
+					    }
+					  ];
+	 	
+	  		
 
-								            		<span>Español</span>
-								            	</li>
-								            	<li onClick={() => this.changeLanguage('en', key)}>
-													<span>English</span>
-												</li>
-												
-								            </ul>
-							            </div>
-							        </ArrowContainer>    )}
-							>
-						
-							    
-								<div className={['badge', 'badgeSubBar'].join(" ")} onClick={() => this.setState({ isLangOpen: !this.state.isLangOpen })}>
+		return (
+			<ContextMenuArea menuItems={itemsLanguages}>
+			  	<div className={['badge', 'badgeSubBar'].join(" ")}>
 												<span>
 													{key.language}
 													{!key.language && 'Unset'}
 												</span>
 											</div>
-							</Popover>
-							);
+		    </ContextMenuArea>
+		);
 	}
 
 	_renderTitleEdit = () => {
@@ -287,11 +219,12 @@ export default class BookRow extends Component<Props> {
 			        },
 			    }))
 
-		console.log("set picked!", this.state.book, pick)
+
 
 		this.onSave();
 	}
 	addField = (field) => {
+		console.log('adding fields!', field)
 		if(field == 'description'){
 
 			if(this.state.book.showDescriptionField == false || !this.state.book.showDescriptionField){
@@ -617,8 +550,7 @@ export default class BookRow extends Component<Props> {
 									<div className={'flexBookSettings'}>
 										<div className={'flexBookSettingsInfo'}>
 											<h1 onClick={() => this.showField(this.state.book, 'title')}>
-												<span>@{this.state.book.userId}</span>
-												<b data-tip="Click to edit" data-place={'bottom'} 	data-effect={'solid'}>/{this.state.book.title}</b>
+												<b data-tip="Click to edit" data-place={'bottom'} 	data-effect={'solid'}>{this.state.book.title}</b>
  
 
 											</h1>
@@ -629,7 +561,7 @@ export default class BookRow extends Component<Props> {
 											{this._renderLanguage(this.state.book)}
 
 											<ToggleDisplay if={typeof this.state.book.author == 'string'}>
-												<div className={['badge', 'badgeSubBar'].join(" ")} style={{ padding: '2px 10px 8px',height: '18px', display: 'inherit'}} onClick={() => this.showField(this.state.book, 'author')}>
+												<div className={['badge', 'badgeSubBar'].join(" ")} style={{ padding: '2px 10px 8px',height: '19px', display: 'inherit'}} onClick={() => this.showField(this.state.book, 'author')}>
 													<span>
 														{this.state.book.author}
 													</span>
@@ -637,7 +569,7 @@ export default class BookRow extends Component<Props> {
 											</ToggleDisplay>
 
 											<ToggleDisplay if={typeof this.state.book.tags == 'object'}>
-											<div className={['badge', 'badgeSubBar'].join(" ")} style={{ padding: '2px 10px 8px',height: '18px', display: 'inherit'}} onClick={() => this.showField(this.state.book, 'tags')}>
+											<div className={['badge', 'badgeSubBar'].join(" ")} style={{ padding: '2px 10px 8px',height: '19px', display: 'inherit'}} onClick={() => this.showField(this.state.book, 'tags')}>
 												<span>
 													{typeof this.state.book.tags == 'object' && this.state.book.tags.length} tags
 												</span>
@@ -645,7 +577,7 @@ export default class BookRow extends Component<Props> {
 											</ToggleDisplay>
 
 											<ToggleDisplay if={typeof this.state.book.picked !== 'undefined' && this.state.book.picked != false} onClick={() => this.setPicked(this.state.book)}>
-									            	<div className={['badge', 'badgeSubBar'].join(" ")} style={{ padding: '2px 10px 8px',height: '18px', display: 'inherit'}}>
+									            	<div className={['badge', 'badgeSubBar'].join(" ")} style={{ padding: '2px 10px 8px',height: '19px', display: 'inherit'}}>
 														<span>
 															Picked
 														</span>
@@ -653,7 +585,7 @@ export default class BookRow extends Component<Props> {
 									            </ToggleDisplay>
 
 											<ToggleDisplay if={typeof this.state.book.description === 'string' && this.state.book.description != ''} onClick={() => this.showField(this.state.book, 'description')}>
-									            	<div className={['badge', 'badgeSubBar'].join(" ")} style={{ padding: '2px 10px 8px',height: '18px', display: 'inherit'}}>
+									            	<div className={['badge', 'badgeSubBar'].join(" ")} style={{ padding: '2px 10px 8px',height: '19px', display: 'inherit'}}>
 														<span>
 															Description
 														</span>
@@ -676,7 +608,7 @@ export default class BookRow extends Component<Props> {
 								    <div className={'flexBookSettingsContent'}>
 											
 
-											<ToggleDisplay show={this.state.book.showTitleField == true}>
+											<ToggleDisplay show={this.state.book.showTitleField == true || this.state.book.showTitleField == null}>
 											  <div className={"webflow-style-input"}>
 											    <input className="" type="email" placeholder="Title" onChange={(text) => this.onChangeField('title', text.target.value)} defaultValue={this.state.book.title}></input>
 											   

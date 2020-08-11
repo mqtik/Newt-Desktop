@@ -15,11 +15,12 @@
 .sidebarWorkChapterList {
 	cursor: pointer;
 	height: 18px;
-    margin-top: 5px;
+    margin-bottom: 5px;
 
     /* width: 93%; */
     color: #fff;
     background-color: rgba(0, 0, 0, 0.59);
+    border-radius: 10px;
     font-weight: 600;
     font-family: Raleway;
         min-width: 100px;

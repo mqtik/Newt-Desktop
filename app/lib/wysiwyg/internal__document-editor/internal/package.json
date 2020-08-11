@@ -1,5 +1,0 @@
-{
-  "main": "../dist/index.js",
-  "module": "../dist/internal__document-editor.esm.js",
-  "typings": "../api/internal.d.ts"
-}

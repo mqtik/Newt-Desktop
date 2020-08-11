@@ -28,7 +28,34 @@ module.exports = api => {
     plugins: [
       // Stage 0
       require('@babel/plugin-proposal-function-bind'),
-
+      require('@babel/plugin-transform-runtime'),
+      ...(api.env(['development', 'test'])
+        ? [
+            [
+              require('babel-plugin-module-resolver'),
+              {
+                alias: {
+                  '^@edtr-io/([^/]+)(.*)$': ([_, packageName, filePath]) => {
+                    const base = `@edtr-io/${packageName}`
+                    if (filePath.startsWith('/__fixtures__')) {
+                      return `${base}${filePath}`
+                    }
+                    if (
+                      filePath.startsWith('/beta') ||
+                      filePath.startsWith('/internal')
+                    ) {
+                      return `${base}/src${filePath
+                        .replace('/beta', '')
+                        .replace('/internal', '')}`
+                    }
+                    return `${base}/src${filePath}`
+                  }
+                },
+                loglevel: 'silent'
+              }
+            ]
+          ]
+        : []),
       // Stage 1
       require('@babel/plugin-proposal-export-default-from'),
       require('@babel/plugin-proposal-logical-assignment-operators'),

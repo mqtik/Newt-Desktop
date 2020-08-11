@@ -1,11 +1,13 @@
-import React, {Component} from 'react';
+import React, {Component, PureComponent} from 'react';
 import SidebarChapters from '../components/sidebarChapters';
+
+import TabsContent from '../components/tabsContent';
 
 import BookRow from '../components/bookRow';
 
 import SidebarWorks from '../components/sidebarWorks';
 
-import API from '../services/api.tsx';
+import API from '../services/api';
 
 import globalStyles from '../styles/globals.css';
 import signedInStyles from '../styles/signedIn.css';
@@ -31,9 +33,7 @@ import { Switch, Route, BrowserRouter } from 'react-router';
 
 import Icon, { Feather } from 'react-web-vector-icons';
 
-import SplitterLayout from 'react-splitter-layout';
-
-import Overdrive from 'react-overdrive'
+//import SplitterLayout from 'react-splitter-layout';
 
 import _ from 'lodash'
 
@@ -41,19 +41,16 @@ import ContentLoader from "react-content-loader"
 
 import Popover, { ArrowContainer } from 'react-tiny-popover'
 
-import { Defer, Img } from 'react-progressive-loader'
 
-const {dialog} = require('electron').remote;
 
 const Remote = new API({ url: process.env.API_URL })
 
-import { FixedSizeList as List } from 'react-window';
-
 import SearchInput, {createFilter} from 'react-search-input'
 
-const {getCurrentWindow, globalShortcut} = require('electron').remote;
+const {dialog, getCurrentWindow, globalShortcut} = require('electron').remote;
 
 const KEYS_TO_FILTERS = ['title', 'author', 'description', 'tags', 'status']
+const KEYS_TO_FILTERS_DATE = ['created_at', 'updated_at']
 const KEYS_TO_FILTERS_SYNC = ['toSync']
 
 import { Redirect } from 'react-router';
@@ -61,7 +58,7 @@ import { Redirect } from 'react-router';
 import Loading from '../components/loading'
 
 
-
+import svglogo from '../assets/logo.svg'
 
 import Dropzone from 'react-dropzone';
 
@@ -77,10 +74,9 @@ import Dropzone from 'react-dropzone';
   */
 
 // ES module
-import Editor from '../lib/editor/wrapper/editor.tsx';
 
 import update from 'immutability-helper'
-
+let offsetf = 102000;
 export default class SignedIn extends Component<Props> {
 	constructor(props){
 		super(props);
@@ -89,7 +85,10 @@ export default class SignedIn extends Component<Props> {
 			rootUser: null,
 			works: null,
 			isLoading: true,
-			openedFiles: null,
+			openedFiles: {
+				all: [{_id: 'welcome', title: 'New Tab', type: 'welcome', changed: false}],
+				total: 1
+			},
 			selectedTab: 0,
 			openPop: false,
 			isPopoverOpen: false,
@@ -110,10 +109,13 @@ export default class SignedIn extends Component<Props> {
 
 			currentSync: 'drafts',
 
-			isImporting: false
+			isImporting: false,
+
+			enableReInitialize: false,
+			dontAskAgainFile: false
 		}
 
-		this._handleTabChange = this._handleTabChange.bind(this);
+		//this._handleTabChange = this._handleTabChange.bind(this);
 		
 
 		let w = getCurrentWindow();
@@ -146,8 +148,87 @@ export default class SignedIn extends Component<Props> {
 		 this.$init();
 
 
+		// this.$onReplaceChapters(0)
+
 	}
 
+
+	$replicateAllChapters = async() => {
+
+		 let optChapters = {
+                 live: true,
+                 retry: true,
+                 filter: '_selector',
+                 //push: {checkpoint: true}, 
+                 //pull: {checkpoint: true},
+                 batch_size: 10000,
+                 batches_limit: 10000,
+                 "continuous":true,
+                 checkpoint: 'source',
+                 //push: {checkpoint: false}, pull: {checkpoint: false},
+                 back_off_function: function (delay) {
+				    if (delay === 0) {
+				      return 5000;
+				    }	
+				    return delay * 3;
+				  },
+				 selector: {
+                  "userId": {
+                    "$eq": 'bookman'
+                  }
+                 }
+              };
+
+              let oneWayChapters = _.clone(optChapters, true);
+              	  oneWayChapters.live = false;
+
+
+              	 // console.log("start replicatio")
+
+            // Remote.ApplicationChapters.replicate.from(Remote.RemoteChapters, oneWayChapters).on('complete', (info) => {
+
+             	//	console.log("on info!", info)
+		            this.replicatorChapters = Remote.ApplicationChapters.sync(Remote.RemoteChapters, 	)
+		              .on('change', (info) => {
+		                //console.log("[sync] on change!", info, info.change.last_seq.split("-")[0], infoDrafts.update_seq, startingpoint);
+
+		              console.log('REPLACE Replication Progress Chapters', info);
+		              }).on('error', (err) => {
+		                  //console.log("[syncchapters] on error!", err)
+		                  this.replicatorChapters.cancel();
+		              }).on('active', (ac) => {
+		                  //console.log("[syncchapters] on active!", ac)
+
+		              }).on('paused', (pa) => {
+		                  console.log("[REPLACE] on paused!", pa)
+
+		              });
+	}
+	$onReplaceChapters = async(offset) => {
+		let allLocal = await(Remote.Work().drafts().chapters().allLocal(1000, offsetf));
+		console.log("all local chapters!", offsetf)
+		offsetf += 1000;
+
+
+		for (var i = allLocal.chapters.length - 1; i >= 0; i--) {
+			if(allLocal.chapters[i].content && !allLocal.chapters[i].native_content){
+				
+				let parsedDOM = await(Remote.Work().drafts().chapters().mapDOM(allLocal.chapters[i].content))
+
+				allLocal.chapters[i].native_content = parsedDOM;
+			}
+
+		}
+
+		let bulkIt = await(Remote.Work().drafts().bulkIt(allLocal.chapters));
+
+		console.log(allLocal)
+		if(allLocal.chapters.length > 0){
+			return this.$onReplaceChapters(offsetf)
+		}
+		return;
+
+	}
 	onUpdatedOrInsertedChapter = (newDoc) => {
 
 
@@ -239,7 +320,7 @@ export default class SignedIn extends Component<Props> {
 
 
 	    } else { // insert
-	    	console.log("INSERT DOC!", index, newDoc)
+	    	//console.log("INSERT DOC!", index, newDoc)
 	    	if(index == -1 && !newDoc._deleted){
 	    		 this.setState((prevState) => update(prevState, { 
 	              works: { 
@@ -249,7 +330,7 @@ export default class SignedIn extends Component<Props> {
 	               }
 	           }));
 
-	    		 console.log("doc inserted!", this.state.works)
+	    		 //console.log("doc inserted!", this.state.works)
 	    	}
 	     
 	    }
@@ -257,7 +338,6 @@ export default class SignedIn extends Component<Props> {
 	
 
 	$init = async() => {
-
 
 		let k = await(Remote.Auth().getLoggedUser());
 
@@ -278,36 +358,43 @@ export default class SignedIn extends Component<Props> {
 
 
 
-        this.setState({works: drafts, openedFiles: openedFiles})
+        this.setState({
+        	works: drafts, 
+        	openedFiles: openedFiles})
         //this.refsEditor.current.focus();
 
 
 
-	    var elem = document.querySelector('.loadingWrapper');
+        if(this.state.openedFiles.all.length == 0) {
+        	this._addTab();
+        }
+	    
+	    /*var elem = document.querySelector('.loadingWrapper');
 
 	    if(elem && elem){
 	    	setTimeout(function(){
 		      window.scrollTo(0, 0);
 		      elem.style.opacity = '0';
-		      setTimeout(function(){
+
+		      setTimeout(() => {
 		        elem.parentNode.removeChild(elem);
 		      },1000)
 		    },1000)
-	    }
+	    }*/
 	    
 
 		//let s = await(Remote.Work().setUp());
 		//console.log("setup!", s, Remote)
 
-		this.syncNewt();
-            
+		this.syncNewt(); 
+ 
            /* this.props.RemoteCloud.ApplicationDrafts.changes({live: true, since: 'now', include_docs: true})
               .on('change', (change) => {
               console.log("[sync] ON CHANNGE!", change)
             }).on('error', console.log.bind(console))*/
       
     	//return;
-
+    	//this.$replicateAllChapters();
 
 	}
 
@@ -326,14 +413,14 @@ export default class SignedIn extends Component<Props> {
 
 	syncNewt = async() => {
 
-		console.log("this state rootuser!", this.state.rootuser)
+
 		if(this.state.rootUser  && typeof this.state.rootUser.draftsCheckpoint === 'undefined'){
 	        let inf = await Remote.ApplicationDrafts.info();
 
-	        console.log("user does not have a checkpoint!", inf)
+
 	        await this.setDraftsCheckpoint(inf.update_seq, 'checkpoint')
 
-	        console.log("user now has a checkpoint", this.state.rootUser)
+
 
 
 	      }
@@ -381,7 +468,7 @@ export default class SignedIn extends Component<Props> {
               //oneWayDrafts.since = 'now';
               oneWayDrafts.checkpoint = 'source';
 	      
-	      console.log("START REPLICATION", optDrafts)
+
 	      Remote.ApplicationDrafts.replicate.from(Remote.RemoteDrafts, oneWayDrafts).on('complete', (info) => {
 	      	//console.log("one way drafts!", info, optDrafts	)
             this.syncDrafts = Remote.ApplicationDrafts.sync(Remote.RemoteDrafts, optDrafts)
@@ -389,14 +476,14 @@ export default class SignedIn extends Component<Props> {
    				this.setDraftsCheckpoint(info.last_seq);
               console.log('Replication Progress', info);
             }).on('error', (err) => {
-                console.log("[sync] on error!", err)
+                //console.log("[sync] on error!", err)
                 this.syncDrafts.cancel();
 
             }).on('active', (ac) => {
-                console.log("[sync] on active!", ac)
+                //console.log("[sync] on active!", ac)
 
             }).on('paused', (pa) => {
-                console.log("[sync] on paused!", pa)
+                //console.log("[sync] on paused!", pa)
 
             }).catch(err => console.log("error!!!!", err))
 	     })
@@ -427,6 +514,7 @@ export default class SignedIn extends Component<Props> {
       ]
    }
 }*/
+				__DEV__ && console.log("START REPLICACTION!");
             	let optChapters = {
                  live: true,
                  retry: true,
@@ -440,7 +528,7 @@ export default class SignedIn extends Component<Props> {
                  //push: {checkpoint: false}, pull: {checkpoint: false},
                  back_off_function: function (delay) {
 				    if (delay === 0) {
-				      return 1000;
+				      return 5000;
 				    }	
 				    return delay * 3;
 				  },
@@ -454,7 +542,7 @@ export default class SignedIn extends Component<Props> {
               let oneWayChapters = _.clone(optChapters, true);
               	  oneWayChapters.live = false;
 
-              console.log("REPLICATION GO CHAPTERSR!", optChapters, oneWayChapters)
+
 
             // Remote.ApplicationChapters.replicate.from(Remote.RemoteChapters, oneWayChapters).on('complete', (info) => {
 
@@ -463,15 +551,15 @@ export default class SignedIn extends Component<Props> {
 		              .on('change', (info) => {
 		                //console.log("[sync] on change!", info, info.change.last_seq.split("-")[0], infoDrafts.update_seq, startingpoint);
 
-		              console.log('Replication Progress Chapters', info);
+		              //console.log('Replication Progress Chapters', info);
 		              }).on('error', (err) => {
-		                  console.log("[syncchapters] on error!", err)
+		                  //console.log("[syncchapters] on error!", err)
 		                  this.replicatorChapters.cancel();
 		              }).on('active', (ac) => {
-		                  console.log("[syncchapters] on active!", ac)
+		                  //console.log("[syncchapters] on active!", ac)
 
 		              }).on('paused', (pa) => {
-		                  console.log("[syncchapters] on paused!", pa)
+		                  //console.log("[syncchapters] on paused!", pa)
 
 		              });
           //   })
@@ -525,7 +613,7 @@ export default class SignedIn extends Component<Props> {
 		
 		let chapterIndex = _.findIndex(chapters, ['_id', key._id]);
 
-		console.log("chapter index!", chapterIndex)
+
 		if(!chapters[chapterIndex].openSettings || chapters[chapterIndex].openSettings == false){
 			chapters[chapterIndex].openSettings = true;
 		} else {
@@ -551,14 +639,14 @@ export default class SignedIn extends Component<Props> {
 		let chapters = [];
 	    let getChapters = await(Remote.Work().drafts().chapters().all(key._id));
 	    
-	    console.log("GET CHAPTERS OF!", getChapters)
+
 
 
 	    if(getChapters && getChapters.chapters && getChapters.chapters.length == 0){
 
 	      let chaptersRemote = await(Remote.Work().drafts().chapters().allRemote(key._id));
 
-	      console.log("chaptersrep", chaptersRemote, key)
+
 	      chapters = chaptersRemote;
 
 	    /*  if(chaptersRemote && chaptersRemote.length == 0){
@@ -586,7 +674,7 @@ export default class SignedIn extends Component<Props> {
 
 	}
 	openWork = (key) => {
-		console.log("open work!", key)
+
 		if(key.openSettings == true){
 			this.toggleSettings(key);
 		}
@@ -603,11 +691,10 @@ export default class SignedIn extends Component<Props> {
 
 	openChapter = async(chapter, book) => {
 		//console.log("open chapter!!", chapter, book)
-
 		let openedFiles = this.state.openedFiles;
 
 		let newOpenedFile = await(Remote.OpenFiles().openChapter(chapter, book));
-		console.log("drafts!", newOpenedFile)
+
 		if(newOpenedFile != null){
 			let openIndex = _.findIndex(this.state.openedFiles.all, ['_id', chapter._id]);
 
@@ -615,17 +702,18 @@ export default class SignedIn extends Component<Props> {
 				openedFiles.all.push(newOpenedFile);
 				openIndex = _.findIndex(this.state.openedFiles.all, ['_id', chapter._id]);
 
-				this.setState({
+				await this.setState({
 		        	openedFiles: openedFiles,
 		        	selectedTab: openIndex
 		        })
 			} else {
-				this.setState({
+				await this.setState({
 		        	selectedTab: openIndex
 		        })
 			}
 			
 		} 
+
 		if(newOpenedFile == true) {
 			let openIndex = _.findIndex(this.state.openedFiles.all, ['_id', chapter._id]);
 
@@ -705,7 +793,7 @@ export default class SignedIn extends Component<Props> {
 
 		let s = dialog.showMessageBox(null, options);
 		s.then(res => {
-			console.log("resp!", res.response)
+
 
 			if(res.response == 2){
 
@@ -735,9 +823,19 @@ export default class SignedIn extends Component<Props> {
 
 		let openIndex = _.findIndex(openedFiles.all, ['_id', file._id]);
 
-		if(openedFiles.all[openIndex].type == 'bulk'){
+		if(openedFiles.all[openIndex].type == 'welcome'){
+			if(openIndex != -1){
+				openedFiles.all.splice(openIndex, 1);
 
+				        await this.setState({
+				        	openedFiles: openedFiles,
+				        	selectedTab: 0
+				        })
+				        return;
+			}
+			
 		}
+
 
 		if(openedFiles.all[openIndex].changed == true && openedFiles.all[openIndex].type == 'wysiwyg'){
 
@@ -749,16 +847,45 @@ export default class SignedIn extends Component<Props> {
 			    title: 'Save File',
 			    message: 'This file has unsaved changes!',
 			    detail: 'Do you want to save it?',
-			    checkboxLabel: 'Remember my answer',
+			    checkboxLabel: 'Don\'t ask again ',
 			    checkboxChecked: true,
 			  };
 
+			  if(this.state.dontAskAgainFile !== false && typeof this.state.dontAskAgainFile == 'object') {
+			  	if(this.state.dontAskAgainFile.checkbox == true){
+			  		
+			  		if(this.state.dontAskAgainFile.response == 2){
+			  			this.saveChapter(file);
+			  		}
+
+			  		if(this.state.dontAskAgainFile.response == 1 || this.state.dontAskAgainFile.response == 2){
+			  			let closedFile = await(Remote.OpenFiles().closeChapter(file._id));
+
+				          openedFiles.all.splice(openIndex, 1);
+
+				        await this.setState({
+				        	openedFiles: openedFiles,
+				        	selectedTab: 0
+				        })
+			  		}
+
+			  		return;
+
+			  	}
+			  }
 
 				let s = dialog.showMessageBox(null, options);
 				s.then(async(res) => {
 
-					console.log("resp file!", res.response)
 
+
+					if(res.checkboxChecked){
+						this.state.dontAskAgainFile = {
+							checkbox: res.checkboxChecked,
+							response: res.response
+						};
+
+					}
 
 					if(res.response == 0){
 						return null;
@@ -770,10 +897,10 @@ export default class SignedIn extends Component<Props> {
 
 					if(res.response == 1 || res.response == 2){
 						let closedFile = await(Remote.OpenFiles().closeChapter(file._id));
-						console.log("splice!", openedFiles, openIndex)
+
 				          openedFiles.all.splice(openIndex, 1);
 
-				        this.setState({
+				        await this.setState({
 				        	openedFiles: openedFiles,
 				        	selectedTab: 0
 				        })
@@ -803,7 +930,7 @@ export default class SignedIn extends Component<Props> {
 
 				let s = dialog.showMessageBox(null, options);
 				s.then(async(res) => {
-					console.log("resp bulk!", res.response)
+
 
 
 					if(res.response == 0){
@@ -834,10 +961,10 @@ export default class SignedIn extends Component<Props> {
 
 					if(res.response == 2 || res.response == 1){
 						let closedFile = await(Remote.OpenFiles().closeChapter(file._id));
-						console.log("splice bulk!", openedFiles, openIndex)
+
 				          openedFiles.all.splice(openIndex, 1);
 
-				        this.setState({
+				        await this.setState({
 				        	openedFiles: openedFiles,
 				        	selectedTab: 0
 				        })
@@ -851,10 +978,10 @@ export default class SignedIn extends Component<Props> {
 		}
 
 		let closedFile = await(Remote.OpenFiles().closeChapter(file._id));
-					console.log("splice!", openedFiles, openIndex)
+
 			          openedFiles.all.splice(openIndex, 1);
 
-			        this.setState({
+			        await this.setState({
 			        	openedFiles: openedFiles,
 			        	selectedTab: 0
 			        })
@@ -862,7 +989,7 @@ export default class SignedIn extends Component<Props> {
 	}
 
 	onSaveBulkChangesToBooks = async(book) => {
-		console.log("save bulk to books", book)
+
 		let isForDeleted = false;
 		let savedFile = await(Remote.OpenFiles().saveBook(book));
 
@@ -914,7 +1041,7 @@ export default class SignedIn extends Component<Props> {
 
 		const openIndex = _.findIndex(this.state.openedFiles.all, ['_id', key._id]);
 
-		console.log("set delete of!", this.state.openedFiles.all[openIndex])
+
 		if(openIndex != -1){
 			this.state.openedFiles.all[openIndex].chapter._deleted = true;
 
@@ -943,71 +1070,100 @@ export default class SignedIn extends Component<Props> {
 
 	}
 
+	triggerChangeOpenedFiles = (index) => {
+
+
+		let boolean = this.state.openedFiles.all[index].changed ? true : false;
+
+
+
+		this.setState((prevState) => update(prevState, { 
+		                  openedFiles: {
+		                      all: {
+		                      	[index]: {
+		                      		changed: {
+		                      			$set: !boolean
+		                      		}
+		                      	}
+		                      }
+		                  }
+		                 }));
+
+
+	}
 	saveChapter = async(key) => {
+
 		let savedChapter = await(Remote.OpenFiles().saveChapter(key));
 
 		let openIndex = _.findIndex(this.state.openedFiles.all, ['_id', key._id]);
 
 		
 		if(this.state.currentWork && this.state.currentSection && this.state.chapters){
-			console.log("opeeeee",key,this.state.currentWork._id)
+
 			if(key.book._id == this.state.currentWork._id){
 				if(this.state.chapters && this.state.chapters != null){
 					let chapterIndex = _.findIndex(this.state.chapters, ['_id', key._id]);
-					console.log("chapter index!", chapterIndex, this.state.chapters[chapterIndex])
+
 					if(chapterIndex != -1){
-						this.state.chapters[chapterIndex].title = key.chapter.title;
+
+						//this.state.chapters[chapterIndex].title = key.chapter.title;
+
 						if(key.chapter._deleted == true){
-							this.state.chapters[chapterIndex]._deleted = true;
+
+							this.setState((prevState) => update(prevState, { 
+				                  chapters: {
+				                  	[chapterIndex]: {
+				                  		_deleted: {
+				                  			$set: true
+				                  		}
+				                  	}
+				                  }
+				                 }));
 						}
-						this.state.openedFiles.all[openIndex].changed = false;
-						this.setState({
-							chapters: this.state.chapters,
-							openedFiles: this.state.openedFiles
-						})
+						
+
+						this.triggerChangeOpenedFiles(openIndex);
 					}
 				} else {
-					console.log("go along", openIndex, this.state.openedFiles.all[openIndex])
-						this.state.openedFiles.all[openIndex].changed = false;
-						this.setState({
-							openedFiles: this.state.openedFiles
-						})
+
+						this.triggerChangeOpenedFiles(openIndex);
 				}
 			} else {
-				this.state.openedFiles.all[openIndex].changed = false;
-						this.setState({
-							openedFiles: this.state.openedFiles
-						})
+				this.triggerChangeOpenedFiles(openIndex);
 			}
 		} else {
-				this.state.openedFiles.all[openIndex].changed = false;
-						this.setState({
-							openedFiles: this.state.openedFiles
-						})
+				this.triggerChangeOpenedFiles(openIndex);
 		}
 
 
 
-		console.log("#saved chapter!", this.state.openedFiles.all, this.state.chapters)
+
 		
 	}
 	handleChange = async(text, key) => {
-		//console.log("handle change!", text)
+
 
 		const openIndex = _.findIndex(this.state.openedFiles.all, ['_id', key._id]);
 
 		if(openIndex != -1){
-			this.state.openedFiles.all[openIndex].chapter.content = text;
+			this.state.openedFiles.all[openIndex].chapter.native_content = text;
 
-			if(!this.state.openedFiles.all[openIndex].chapter.chaged || this.state.openedFiles.all[openIndex].chapter.changed == false){
-				this.state.openedFiles.all[openIndex].changed = true;
+			if(!this.state.openedFiles.all[openIndex].chapter.changed || this.state.openedFiles.all[openIndex].chapter.changed == false){
+				//this.state.openedFiles.all[openIndex].changed = true;
+				/*this.setState((prevState) => update(prevState, { 
+		                  openedFiles: {
+		                      all: {
+		                      	[openIndex]: {
+		                      		changed: {
+		                      			$set: true
+		                      		}
+		                      	}
+		                      }
+		                  }
+		                 }));*/
 			}
 		}
 
-
-		this.setState({
-			selectedTab: openIndex
-		})
 
 		let s = await(Remote.OpenFiles().save(key, text));
 		return openIndex;
@@ -1016,8 +1172,11 @@ export default class SignedIn extends Component<Props> {
 	 _handleTabChange = (index) => {
 
 	 	this.setState({
-	 		selectedTab: index || 0
+	 		selectedTab: index,
+	 		enableReInitialize: true
 	 	})
+	 	
+	 	return this.state.selectedTab;
 
 	 }
 
@@ -1048,6 +1207,70 @@ export default class SignedIn extends Component<Props> {
 	  	
 	  	//this.state.searchTyping = e.target.value;
 	  }
+
+	  onChangeChapterHeader = async(e, key) => {
+	  	//console.log("e targe title chap", e.target.value)
+
+
+	  	const openIndex = _.findIndex(this.state.openedFiles.all, ['_id', key._id]);
+	  	if((e != '' && e != null) && openIndex != -1){
+	  		
+	  		this.setState((prevState) => update(prevState, { 
+		                  openedFiles: {
+		                      all: {
+		                      	[openIndex]: {
+		                      		changed: {
+		                      			$set: false
+		                      		},
+		                      		chapter:  {
+		                      			header: {
+		                      				$set: e
+		                      			}
+		                      		}
+		                      	}
+		                      }
+		                  }
+		                 }));
+
+
+	  		let s = await(Remote.OpenFiles().saveHeader(key, e));
+
+		  	return s;
+	  	}
+	  	
+	  	//this.state.searchTyping = e.target.value;
+	  }
+
+	  onDeleteCoverChapter = async(key) => {
+	  	//console.log("e targe title chap", e.target.value)
+
+	  	const openIndex = _.findIndex(this.state.openedFiles.all, ['_id', key._id]);
+	  	if(openIndex != -1){
+	  		this.setState((prevState) => update(prevState, { 
+		                  openedFiles: {
+		                      all: {
+		                      	[openIndex]: {
+		                      		changed: {
+		                      			$set: false
+		                      		},
+		                      		chapter:  {
+		                      			header: {
+		                      				$set: null
+		                      			}
+		                      		}
+		                      	}
+		                      }
+		                  }
+		                 }));
+
+	  		let s = await(Remote.OpenFiles().deleteHeader(key));
+
+		  	return s;
+	  	}
+	  	
+	  	//this.state.searchTyping = e.target.value;
+	  }
+
 	_renderOpenedFile = (key, index) => {
 		//{ ReactHtmlParser(key.chapter.content) }
 		/*let editorState;
@@ -1057,13 +1280,13 @@ export default class SignedIn extends Component<Props> {
 	    } else {
 	      editorState = createEditorState();
 	    }*/
-
+	    //console.log("chapter key!!", key)
 
 	    	return (
 				<div className={['tabWysiwyg']} key={key.chapter._id} changed={key.changed} id={key.chapter._id} title={key.chapter.title} closeChapter={() => this.closeFile(key)}>
 					<div className={['toolsBar', 'noselect'].join(" ")}>
 						<div className={'toolsTitleBook'}>
-							{ key.changed == true &&
+							{/*key.changed == true &&
 								<button className={['buttonShine', 'bookRowButton'].join(' ')} onClick={() => this.saveChapter(key)} style={{padding: '1px 6px 3px 10px', marginRight: 5}}>
 													<Icon
 														 name='md-save'
@@ -1074,81 +1297,18 @@ export default class SignedIn extends Component<Props> {
 													/> 
 													<span>Save</span>
 										</button>
-								}
+								*/}
 							<nav className="breadcrumbs">
 									  <ul>
-									  	<Popover
-										    isOpen={this.state.optionsFile}
-										    position={'bottom'} // preferred position
-										    transitionDuration={0}
-										    onClickOutside={() => this.setState({ optionsFile: false })}
-										    content={({ position, targetRect, popoverRect }) => (
-										        <ArrowContainer // if you'd like an arrow, you can import the ArrowContainer!
-										            position={'bottom'}
-										            targetRect={targetRect}
-										            popoverRect={popoverRect}
-										            arrowColor={'#232323'}
-										            arrowSize={10}
-										            arrowStyle={{ opacity: 1 }}
-										        >
-										            <div
-										                style={{ backgroundColor: '#232323', border: '1px solid #242424', boxShadow: '0px 0px 20px -9px rgba(0,0,0,0.75)', borderRadius:4, padding: 0, opacity: 1, width: 140, height: 30,  display: 'table-cell' }}
-
-										            >
-										            	<ul className={'popoverNewt'}>
-											            	<li  onClick={() => this.setDeleted(key)}>
-																<span>Delete</span>
-															</li>
-											            </ul>
-										            </div>
-										        </ArrowContainer> )}>
-											
-
-											<li onClick={() => this.setState({ optionsFile: !this.state.optionsFile })}><a href="#">
-										  		<Icon
-															 name='cog'
-															 font='Entypo'
-															 style={{verticalAlign: 'bottom', margin: '3px 3px 0 0'}}
-															 color='#444'
-															 size={13}
-														/> 
-											</a></li>
-										</Popover>
+									  	
 
 									  	
-									  	<li><a href="#">@{key.book.userId}</a></li>
-									  	<li><a href="#">{key.book.title.slice(0,30)}</a></li>
-
-									  	<Popover
-										    isOpen={this.state.chapterTitlePopover}
-										    position={'bottom'} // preferred position
-										    transitionDuration={0}
-										    onClickOutside={() => this.setState({ chapterTitlePopover: false })}
-										    content={({ position, targetRect, popoverRect }) => (
-										        <ArrowContainer // if you'd like an arrow, you can import the ArrowContainer!
-										            position={'bottom'}
-										            targetRect={targetRect}
-										            popoverRect={popoverRect}
-										            arrowColor={'#232323'}
-										            arrowSize={10}
-										            arrowStyle={{ opacity: 1 }}
-										        >
-										            <div
-										                style={{ backgroundColor: '#232323', border: '1px solid #242424', boxShadow: '0px 0px 20px -9px rgba(0,0,0,0.75)', borderRadius:4, padding: 0, opacity: 1, width: 140, height: 30,  display: 'table-cell' }}
-
-										            >
-										            	<ul className={'popoverNewt'}>
-											            	<li>
-											            		
-																<input type="text" defaultValue={key.chapter.title} autoFocus onChange={(e) => this.onChangeTitle(e, key)} placeholder="Search" className="input-chapter-title" onKeyDown={this._handleKeyDownChapter} required />
-											            	</li>
-											            </ul>
-										            </div>
-										        </ArrowContainer> )}>
-											<li onClick={() => this.setState({ chapterTitlePopover: !this.state.chapterTitlePopover })}>
+									  	{/*<li><a href="#">@{key.book.userId}</a></li>*/}
+									  	<li><a href="#" className={'firstBread'}>{key.book.title.slice(0,30)}</a></li>
+											<li>
 												<a className="current">{key.chapter.title}</a>
 											</li>
-										</Popover>
+
 
 
 									  </ul>
@@ -1157,13 +1317,32 @@ export default class SignedIn extends Component<Props> {
 
 						</div>
 					</div>
-					<Editor
-			          tag="div"
-			          className={["editableInput"+key._id, "tabWysiwyg"].join(" ")}
-			          text={key.chapter.content || ''}
-			          onChange={(text, medium) => this.handleChange(text, key)}
-			          options={{ buttonLabels: 'fontawesome', toolbar: {  buttons: ['bold', 'italic', 'underline', 'h2', 'h3', 'quote', 'justifyLeft','justifyCenter', 'justifyRight', 'justifyFull'] }, sticky: true, static: true }}
-			        />
+				
+					
+			    
+					         
+				</div>
+			);
+
+		
+	}
+
+	_renderNewTab = (key, index) => {
+		//{ ReactHtmlParser(key.chapter.content) }
+		/*let editorState;
+	    if (key.chapter.content) {
+	      const rawState = convertToRaw(convertFromHTML(this.state.editorState));
+	      editorState = createEditorState(rawState);
+	    } else {
+	      editorState = createEditorState();
+	    }*/
+	    //console.log("chapter key!!", key)
+
+	    	return (
+				<div className={[]} key={key._id} changed={key.changed} id={key._id} title={key.title || 'New Tab'} closeChapter={() => this.closeFile(key)}>
+					
+					
+			    
 					         
 				</div>
 			);
@@ -1173,7 +1352,7 @@ export default class SignedIn extends Component<Props> {
 
 
 	onDrop = (files) => {
-		console.log("filesssssss", files)
+
       this.setState({files})
     }
     onImportWork = () => {
@@ -1185,18 +1364,7 @@ export default class SignedIn extends Component<Props> {
 			<div className={'tabSettings'} key={keyBulk._id} changed={keyBulk.changed} id={keyBulk._id} type={keyBulk.type} title={keyBulk.books.length == 1 ? keyBulk.books[0].title : 'Bulk Settings'} closeChapter={() => this.closeFile(keyBulk)}>
 				<div className={['toolsBar', 'noselect'].join(" ")}>
 						<div className={'toolsTitleBook'}>
-							{ keyBulk.changed == true &&
-								<button className={['buttonShine', 'bookRowButton'].join(' ')} onClick={() => this.onSaveBulkChangesToBooks(keyBulk)} style={{padding: '1px 6px 3px 10px', marginRight: 5}}>
-													<Icon
-														 name='md-save'
-														 font='Ionicons'
-														 style={{verticalAlign: 'bottom', margin: '3px 3px 0 0'}}
-														 color='#fff'
-														 size={13}
-													/> 
-													<span>Save</span>
-										</button>
-								}
+							
 							{ keyBulk.books.length == 1 &&
 								<nav className="breadcrumbs">
 									  <ul>
@@ -1224,6 +1392,7 @@ export default class SignedIn extends Component<Props> {
 							
 						</div>
 					</div>
+				{/*
 				<div style={{paddingTop: 15}}>
 				{
 					keyBulk.books.map((key, index) => {
@@ -1233,6 +1402,8 @@ export default class SignedIn extends Component<Props> {
 					})
 				}
 				</div>
+
+			*/}
 			</div>
 			)
 	}
@@ -1279,7 +1450,7 @@ export default class SignedIn extends Component<Props> {
 	}
 
 	setDraftsCheckpoint = async(seq) => {
-	    console.log("this state ccheckpoinnt", this.state.rootUser, seq)
+
 
 	   	await this.setState((prevState) => update(prevState, { 
                   rootUser: {
@@ -1343,7 +1514,7 @@ export default class SignedIn extends Component<Props> {
 	}
 
 	onSelectBook = (book) => {
-		console.log("on select book!", this.state.selectedBooks)
+
 		if(this.state.selectedBooks == null){
 			this.state.selectedBooks = [];
 		}
@@ -1353,20 +1524,43 @@ export default class SignedIn extends Component<Props> {
 		let workIndex = _.findIndex(this.state.works.rows, ['_id', book._id]);
 
 		if(selectedIndex == -1){
-			this.state.selectedBooks.push(book);
-			this.state.works.rows[workIndex].selected = true;
+			this.setState((prevState) => update(prevState, { 
+				                   selectedBooks: {
+				                   	$push: [book]
+				                   },
+				                   works: {
+				                   	rows: {
+				                   		[workIndex]: {
+				                   			selected: {
+				                   				$set: true
+				                   			}
+				                   		}
+				                   	}
+				                   }
+				                 }));
 		} else {
-			this.state.selectedBooks.splice(selectedIndex, 1);
-			this.state.works.rows[workIndex].selected = false;
+			this.setState((prevState) => update(prevState, { 
+				                   selectedBooks: {
+				                   	$splice: [[selectedIndex, 1]]
+				                   },
+				                   works: {
+				                   	rows: {
+				                   		[workIndex]: {
+				                   			selected: {
+				                   				$set: true
+				                   			}
+				                   		}
+				                   	}
+				                   }
+				                 }));
+			//this.state.selectedBooks.splice(selectedIndex, 1);
+			//this.state.works.rows[workIndex].selected = false;
 		}
 		
 		/*if(this.state.selectedBooks != null && this.state.selectedBooks.length > 0){
 
 		}*/
-		this.setState({
-				works: this.state.works,
-				selectedBooks: this.state.selectedBooks
-			})
+		
 	}
 	toggle = (toState = null) =>  {
 	    this.setState({ openPop: toState === null ? !this.state.openPop : toState })
@@ -1407,7 +1601,7 @@ export default class SignedIn extends Component<Props> {
 				  			<Icon
 							  name='ios-arrow-back'
 							  font='Ionicons'
-							  color='#111'
+							  color='rgba(206, 206, 206, 0.78)'
 							  size={20}
 							  // style={{}}
 							/>
@@ -1430,7 +1624,7 @@ export default class SignedIn extends Component<Props> {
 				  			<Icon
 							  name='cloud-search'
 							  font='MaterialCommunityIcons'
-							  color='#111'
+							  color='rgba(206, 206, 206, 0.78)'
 							  size={20}
 							  // style={{}}
 							/>
@@ -1453,7 +1647,7 @@ export default class SignedIn extends Component<Props> {
 							            arrowStyle={{ opacity: 1 }}
 							        >
 							            <div
-							                style={{ backgroundColor: '#232323', border: '1px solid #242424', boxShadow: '0px 0px 20px -9px rgba(0,0,0,0.75)', borderRadius:4, padding: 0, opacity: 1, width: 140, height: 30,  display: 'table-cell' }}
+							                className={'popoverContainerNewt'}
 							                onClick={() => this.setState({ isPopoverOpen: !this.state.isPopoverOpen })}
 							            >
 							            	<ul className={'popoverNewt'}>
@@ -1478,7 +1672,7 @@ export default class SignedIn extends Component<Props> {
 							        <Icon
 																			  name='plus'
 																			  font='MaterialCommunityIcons'
-																			  color='#111'
+																			  color='rgba(206, 206, 206, 0.78)'
 																			  size={20}
 																			  // style={{}}
 																			/>
@@ -1497,12 +1691,12 @@ export default class SignedIn extends Component<Props> {
 							            position={'bottom'}
 							            targetRect={targetRect}
 							            popoverRect={popoverRect}
-							            arrowColor={'#232323'}
+							            arrowColor={'#fff'}
 							            arrowSize={10}
 							            arrowStyle={{ opacity: 1 }}
 							        >
 							            <div
-							                style={{ backgroundColor: '#232323', border: '1px solid #242424', boxShadow: '0px 0px 20px -9px rgba(0,0,0,0.75)', borderRadius:4, padding: 0, opacity: 1, width: 130, height: 30,  display: 'table-cell' }}
+							                className={'popoverContainerNewt'}
 							                onClick={() => this.setState({ isPopoverUserOpen: !this.state.isPopoverUserOpen })}
 							            >
 							            	<ul className={'popoverNewt'}>
@@ -1544,17 +1738,44 @@ export default class SignedIn extends Component<Props> {
 				  		);
 	 }
 
-	 _handleKeyDown = (e) => {
-	 	//console.log("handle keydown!", this.state.searchTyping)
+	 _handleKeyDown = async(e) => {
+	 	console.log("handle keydown!", e.key, this.state.searchTyping, this.state.works)
 	    if (e.key === 'Enter') {
-	      console.log('do validate');
-	      this.setState({
-	      	searchTerm: this.state.searchTyping
-	      })
+	    	if(this.state.searchTyping != null && this.state.searchTyping != ''){
+	    		let f = await(Remote.Work().drafts().search(this.state.searchTyping));
+	    		this.state.works.rows = f;
+	    		this.state.works.total_rows = f.length;
+			    	console.log("f!!!", f)
+			    	if(this.state.works && this.state.works.rows){
+			    		this.setState({
+				      	works: this.state.works
+				      })
+			    	}
+
+	    	} else {
+	    		let f = await(Remote.Work().drafts().all());
+	    		this.setState({
+			      	works: f
+			      })
+	    	}
+	    	
 	    }
+	  }
+
+	  cleanSearch = async() =>  {
+	  	let f = await(Remote.Work().drafts().all());
+	  	console.log("c len serch!", f)
+	    		this.setState({
+			      	works: f,
+			      	searchTerm: null,
+			      	searchTyping: null
+			      })
 	  }
 	  onTypeSearch = (e) => {
 	  	//console.log("e targe search", e.target.value)
+	  	this.setState({
+			     searchTyping: e.target.value
+			      })
 	  	this.state.searchTyping = e.target.value;
 	  }
 	 _renderCoreSearchSidebar = () => {
@@ -1565,7 +1786,7 @@ export default class SignedIn extends Component<Props> {
 				  			<Icon
 							  name='closecircle'
 							  font='AntDesign'
-							  color='#111'
+							  color='rgba(206, 206, 206, 0.78)'
 							  size={20}
 							  // style={{}}
 							/>
@@ -1596,8 +1817,9 @@ export default class SignedIn extends Component<Props> {
 				  			<Icon
 							  name='cloud-search'
 							  font='MaterialCommunityIcons'
-							  color='#111'
-							  size={20}
+							  color='rgba(206, 206, 206, 0.78)'
+							  size={17}
+							  style={{verticalAlign:'sub'}}
 							  // style={{}}
 							/>
 							
@@ -1614,12 +1836,12 @@ export default class SignedIn extends Component<Props> {
 							            position={'bottom'}
 							            targetRect={targetRect}
 							            popoverRect={popoverRect}
-							            arrowColor={'#232323'}
+							            arrowColor={'#fff'}
 							            arrowSize={10}
 							            arrowStyle={{ opacity: 1 }}
 							        >
 							            <div
-							                style={{ backgroundColor: '#232323', border: '1px solid #242424', boxShadow: '0px 0px 20px -9px rgba(0,0,0,0.75)', borderRadius:4, padding: 0, opacity: 1, width: 100, height: 30,  display: 'table-cell' }}
+							                className={'popoverContainerNewt'}
 							                onClick={() => this.setState({ isPopoverOpen: !this.state.isPopoverOpen })}
 							            >
 							            	<ul className={'popoverNewt'}>
@@ -1627,7 +1849,7 @@ export default class SignedIn extends Component<Props> {
 								            		<Icon
 																			  name='plus'
 																			  font='MaterialCommunityIcons'
-																			  color='#fff'
+																			  color='#737373'
 																			  size={18}
 																			  // style={{}}
 																			/>
@@ -1650,7 +1872,8 @@ export default class SignedIn extends Component<Props> {
 								            	
 								            </ul>
 							            </div>
-							        </ArrowContainer>    )}
+							        </ArrowContainer>    
+							       )}
 							>
 								
 
@@ -1659,7 +1882,7 @@ export default class SignedIn extends Component<Props> {
 							        <Icon
 																			  name='plus'
 																			  font='MaterialCommunityIcons'
-																			  color='#111'
+																			  color='rgba(206, 206, 206, 0.78)'
 																			  size={20}
 																			  // style={{}}
 																			/>
@@ -1680,12 +1903,12 @@ export default class SignedIn extends Component<Props> {
 							            position={'bottom'}
 							            targetRect={targetRect}
 							            popoverRect={popoverRect}
-							            arrowColor={'#232323'}
+							            arrowColor={'#fff'}
 							            arrowSize={10}
 							            arrowStyle={{ opacity: 1 }}
 							        >
 							            <div
-							                style={{ backgroundColor: '#232323', border: '1px solid #242424', boxShadow: '0px 0px 20px -9px rgba(0,0,0,0.75)', borderRadius:4, padding: 0, opacity: 1, width: 100, height: 30,  display: 'table-cell' }}
+							                className={'popoverContainerNewt'}
 							                onClick={() => this.setState({ isPopoverUserOpen: !this.state.isPopoverUserOpen })}
 							            >
 							            	<ul className={'popoverNewt'}>
@@ -1728,7 +1951,7 @@ export default class SignedIn extends Component<Props> {
 	 }
 
 	 onDropEpubs = (files) => {
-	 	console.log("files!", files)
+
 
 	 	const reader = new FileReader();
 
@@ -1759,7 +1982,7 @@ export default class SignedIn extends Component<Props> {
 
           let bulkIt = await(Remote.Work().drafts().bulkIt(ic.chapters));
 
-         console.log("bilkit!", bulkIt)
+
           //let w = this.state.works;
           //w.rows.unshift(ic.book);
           //console.log("test")
@@ -1861,7 +2084,7 @@ export default class SignedIn extends Component<Props> {
 
       let p = await Remote.Sync().pullPush('pull', db);
 
-		console.log("pull!!!", p)
+
 		this.setState({
 			stateSync: null,
 			statusPull: p
@@ -1888,7 +2111,7 @@ export default class SignedIn extends Component<Props> {
 	      	let sA = await Remote.Sync().setAsSynced(tS);
 	      }
 
-	      console.log("pulsh!", tS)
+
       }
       
 
@@ -1924,7 +2147,7 @@ export default class SignedIn extends Component<Props> {
 		const toSync = this.state.works.rows.filter(r => {
 			return r.toSync == true;
 		})
-		console.log("to sync!", toSync)
+
 		return  (
 			<div>
 				<div className="nav-switch">
@@ -1965,106 +2188,88 @@ export default class SignedIn extends Component<Props> {
 		    </div>
 			)
 	}
+	key = { _id: 'welcome', title: 'New Tab', type: 'welcome',changed: false}
+	_addTab = () => {
+		if(this.state.openedFiles && this.state.openedFiles.all && this.state.openedFiles.all.length > 0){
+			var index = _.findIndex(this.state.openedFiles.all, ['type', 'welcome']);
+			if(index != -1){
+				return this.setState((prevState) => update(prevState, { 
+				                   selectedTab: {
+				                   	$set: index
+				                   },
+				                   currentSection: {
+				                   	$set: 'works'
+				                   }
+				                 }));
+			}
+		}
+		
+
+		this.setState((prevState) => update(prevState, { 
+			              	openedFiles: { 
+			              		all: {
+			              			$push: [this.key]
+			              		}
+			                   },
+			                   selectedTab: {
+			                   	$set: this.state.openedFiles.all.length
+			                   }
+			                 }));
+	}
+
+	_renderHome = () => {
+
+		const bo = this.state.works.rows.sort(function compare(a, b) {
+		  var dateA = new Date(a.updated_at);
+		  var dateB = new Date(b.updated_at);
+		  return dateA - dateB;
+		}).slice(0,20);
+
+		return (
+			<div className={'homeRendered'}>
+			<div style={{width: '100%'}}>
+				<h1>Books you've been writing</h1>
+				</div>
+			<div className="homeApp">
+			{
+				bo.map(b => {
+
+					return (
+						<div className={'homeCover'} style={{backgroundImage: b.cover ? 'url('+b.cover+')' : null}}>
+						</div>
+						)
+				})
+			}
+			</div>
+			</div>)
+
+	}
 	render(){
 
 	 if(this.state.rootUser != null){
-	 	
+	 	const openedFiles = (this.state.openedFiles && this.state.openedFiles) ? this.state.openedFiles : [];
+	 	let opwh = openedFiles && openedFiles.all.length > 0 ? openedFiles.all : [{_id: 'welcome', title: 'New Tab', type: 'welcome', changed: false}];
+
 	 	return (
-	  	<div style={{backgroundColor: 'rgb(245, 251, 255)', width: '100%', height: '100%'}}>
-	  		<div className={'topAppDraggable'}></div>
-	  		<SplitterLayout
-	  			vertical={false}
-	  			secondaryMinSize={this.state.isSearching == true ? 200 : 75}
-	  			primaryMinSize={400}
-	  			primaryIndex={1}
-	  			secondaryInitialSize={75}>
-
-				  <div className={[signedInStyles['newtSidebar'], 'noselect'].join(" ")}>
-
-				  	<div className={signedInStyles['sidebarTop']}>
-				  		{(this.state.selectedBooks == null && (this.state.currentSection == 'works') &&  this.state.isSearching != true) && this._renderCoreSidebar()}
-				  		{(this.state.selectedBooks == null && this.state.currentSection == 'chapters' && this.state.isSearching != true) && this._renderGoBackSidebar()}
-				  		{(this.state.selectedBooks == null && this.state.isSearching == true) && this._renderCoreSearchSidebar()}
-				  		{(this.state.selectedBooks != null) && this._renderSelectedBar()}
-				  		{(this.state.selectedBooks == null && (this.state.currentSection == 'sync') &&  this.state.isSearching != true) && this._renderGoBackSidebar()}
-				  	</div>
-
-				  	<div className={signedInStyles['sidebarChapters']}>
-
-				  		{
-				  			(this.state.currentSection == 'works' || this.state.currentSection == 'chapters') && this.state.works == null && Array(0,1,2,3).map(res => {
-				  				return (
-				  					<div style={{padding: 10,height: 58}} key={Math.random()}>
-				  						<ContentLoader 
-															    speed={2}
-															    width={400}
-															    height={160}
-															    viewBox="0 0 400 160"
-															    backgroundColor="transparent"
-															    foregroundColor="#ecebeb"
-															  >
-															    <rect x="65" y="6" rx="3" ry="3" width="217" height="10" /> 
-															    <rect x="65" y="21" rx="3" ry="3" width="150" height="9" /> 
-															    <rect x="2" y="1" rx="0" ry="0" width="51" height="56" /> 
-															    <rect x="42" y="30" rx="0" ry="0" width="8" height="11" />
-															  </ContentLoader></div>
-															  )
-				  			}) 
-				  		}
-				  		{
-				  			(this.state.currentSection == 'works' || this.state.currentSection == 'chapters') && this.state.works != null && <SidebarWorks 
-				  											onMoveChapters={(chapters) => this.$onChaptersMove(chapters)}
-				  											onCreateChapter={() => this.$onCreateChapter()}
-				  											onCreateWork={() => this.$onCreateWork()}
-				  											onGoSync={() => this.setState({currentSection: 'sync'})}
-				  											chapters={this.state.chapters} 
-				  											currentWork={this.state.currentWork} 
-				  											currentSection={this.state.currentSection} 
-				  											openWork={(k) => this.openWork(k)} 
-				  											closeWork={(k) => this.closeWork(k)} 
-				  											openBookSettings={(book) => this.openSettings(book)} 
-				  											onSelectBook={(book) => this.onSelectBook(book)} 
-				  											openChapter={(chapter, book) => this.openChapter(chapter, book)} 
-				  											works={this.state.works.rows.filter(createFilter(this.state.searchTerm, KEYS_TO_FILTERS))} 
-				  											selectedWorks={this.state.selectedBooks} 
-				  											rootUser={this.state.rootUser} 
-				  											isSearching={this.state.isSearching}
-				  											searchTerm={this.state.searchTerm}
-				  											toggleSettingsChapters={(key) => this.toggleSettingsChapters(key)}
-				  											onUpdatedOrInserted={this.onUpdatedOrInserted.bind(this)}
-				  											onUpdatedOrInsertedChapter={this.onUpdatedOrInsertedChapter.bind(this)}
-				  											onSyncChapters={(id) => this.onSyncChapters(id)}
-				  										/>
-
-				  		}
-				  		{
-				  			this.state.currentSection == 'sync' && this._renderSync()
-				  		}
-				  		{/*<BrowserRouter>
-					      <Switch>
-					          <Route path='/' exact component={pageA} />
-					          <Route path={'/program'} component={pageB} />
-					      </Switch>
-					    </BrowserRouter>*/}
-					    
-
-					    
-				  	</div>
-				  </div>
+	  	<div style={{width: '100%', height: '100%', backgroundColor: '#232323'}}>
+	  		
 				  <div className={signedInStyles['newtContainer']} style={{zIndex: 2}}>
 
 				  {
-				  	this.state.openedFiles != null && this.state.openedFiles.all && this.state.openedFiles.all.length > 0 && 
-				  	<TabPanel ref={r => (this.tabPanel = r)} selectedTab={this.state.selectedTab} onTabChange={this._handleTabChange}>
+				  	opwh != null && opwh && 
+				  	<div>
+				  	<TabPanel ref={r => (this.tabPanel = r)} addNewTab={() => this._addTab()} selectedTab={this.state.selectedTab} onTabChange={(index) => this._handleTabChange(index)}>
 
 				  		{
-				  			this.state.openedFiles.all.map((key, index) => {
+				  			opwh.map((key, index) => {
 
 				  				if(key.type == 'wysiwyg'){
 				  					return this._renderOpenedFile(key, index)
-				  				} 
+				  					} 
 				  				else if(key.type == 'bulk') {
 				  					return this._renderSettingsBook(key, index);
+				  				} else if(key.type == 'welcome') {
+				  					return this._renderNewTab(key, index);
 				  				} else {
 				  					return (
 				  						<div title="title">test</div>
@@ -2076,117 +2281,66 @@ export default class SignedIn extends Component<Props> {
 				       
 
 				      </TabPanel>
+				      <TabsContent 
+				      	onSignOut={() => this.onSignOut()}
+				      	onChaptersMove={(chapters) => this.$onChaptersMove(chapters)}
+				  		onCreateChapter={() => this.$onCreateChapter()}
+				  		onCreateWork={() => this.$onCreateWork()}
+				  		onGoSync={() => this.setState({currentSection: 'sync'})}
+				  		chapters={this.state.chapters} 
+				  		currentWork={this.state.currentWork} 
+				  		currentSection={this.state.currentSection} 
+				  		openWork={(k) => this.openWork(k)} 
+				  		closeWork={(k) => this.closeWork(k)} 
+				  		openBookSettings={(book) => this.openSettings(book)} 
+				  		onSelectBook={(book) => this.onSelectBook(book)} 
+				  		openChapter={(chapter, book) => this.openChapter(chapter, book)} 
+				  		works={(this.state.works  && this.state.works.rows) ? this.state.works.rows : null} 
+				  		selectedBooks={this.state.selectedBooks} 
+				  		rootUser={this.state.rootUser} 
+				  		onDropEpubs={(files) => this.onDropEpubs(files)}
+				  		isSearching={this.state.isSearching}
+				  		searchTerm={this.state.searchTyping}
+				  		toggleSettingsChapters={(key) => this.toggleSettingsChapters(key)}
+				  		onUpdatedOrInserted={this.onUpdatedOrInserted.bind(this)}
+				  		onUpdatedOrInsertedChapter={this.onUpdatedOrInsertedChapter.bind(this)}
+				  		onSyncChapters={(id) => this.onSyncChapters(id)}
+				  		openBulk={(s) => this.openBulk(s)}
+				  		onCancelSelect={() => this.onCancelSelect()}
+				      	onChangeBulk={(bulk, book) => this.onChangeBulk(bulk, book)} 
+				      	onSaveBulkChanges={(bulk) => this.onSaveBulkChangesToBooks(bulk)} 
+				      	onDeleteCover={(key) => this.onDeleteCoverChapter(key)} 
+				      	onChangeChapterHeader={(e, key) => this.onChangeChapterHeader(e, key)} 
+				      	saveDoc={(key) => this.saveChapter(key)} 
+				      	closeDoc={(key) => this.closeFile(key)} 
+				      	deleteDoc={(key) => this.setDeleted(key)}  
+				      	changeTitle={(e, key) => this.onChangeTitle(e, key)} 
+				      	enableReInitialize={this.state.enableReInitialize} 
+				      	handleChange={(text, key) => this.handleChange(text, key)} 
+				      	onGoBack={() => this.onGoBack()} 
+				      	selectedTab={this.state.selectedTab} 
+				      	cleanSearch={(e) => this.cleanSearch(e)}
+				      	onTypeSearch={(e) => this.onTypeSearch(e)}
+				      	handleKeyDown={(e) => this._handleKeyDown(e)}
+				      	openedFiles={opwh}/>
+				      </div>
 				  }
 				  {this.state.works == null && this.state.openedFiles == null && <div className={'absoluteCenter'}><Loading /></div>}
-				  {this.state.openedFiles == null || this.state.openedFiles.all && this.state.openedFiles.all.length == 0 && 
-				  	<div className={'noOpensFiles'} style={{backgroundColor: '#151515'}}>
-				  		
-				  		<div className="parallax-container">
-						  <img src={blue1} alt=" " />
-						  <img src={purple1} alt=" " />
-						  <img src={green1} alt=" " />
-						  <img src={blue2} alt=" " />
-						  <img src={purple2} alt=" " />
-						  <img src={blue3} alt=" " />
-
-						  <div className="parallax-section">
-						  	<h1><div className="parallax-counter"><span>1</span></div>Get Started</h1>
-						  	<p>Hi. Welcome to Newt.<br />
-						  	A multi-platform system to keep your stories in sync.s
-						  		</p>
-
-						  	<img className={'imgnoOpenFiles'} style={{marginTop: 50}} src={firt} />
-						  </div>
-
-						  <div className="parallax-section">
-						  	<h1>Stay Focused <div className="parallax-counter"><span>2</span></div></h1>
-						  	<p>We're here to help you with your stories.<br />
-						  	Here you can plan, write, archive, review,<br />
-						  	search, versioning, storyboard,<br />
-						  	publish...<br  /><br />
-						  	If you need inspiration,<br />we're good about that too.</p>
-						  	<img className={'imgnoOpenFiles'} src={immTh} />
-						  </div>
-
-
-						  <div className="parallax-section">
-						  	<h1><div className="parallax-counter"><span>3</span></div> Continue the story<br /> in your phone</h1>
-						  	<p>Newt works offline, <br/>keeping revisions of your work across time.<br />
-						  		Those revisions are useful to keep <br />your work in sync with the cloud.<br /><br />
-						  		And with your phone.<br />
-						  		</p>
-						  	<img className={'imgnoOpenFiles'} src={conts} />
-						  </div>
-
-						  <div className="parallax-section">
-						  	<h1>A lot like<br /> the modern world<div className="parallax-counter"><span>4</span></div></h1>
-						  	<p>
-						  		It doesn't need to be this hard <br />to be able to edit multiple stories and chapters<br />
-						  		at once. Newt offers a brand-new bulk edit.<br /><br/>
-						  		
-						  		Colorful stories <br/>can have lots of images, illustrations and videos.<br />
-						  		Drag and drop 'em in!<br /><br />
-						  		Editing in Newt looks just like the final page.
-
-						  		</p>
-						  	<img className={'imgnoOpenFiles'} src={modsv} />
-						  </div>
-
-						  <div className="parallax-section">
-						  	<h1><div className="parallax-counter"><span>5</span></div> Want to<br /> Publish?</h1>
-						  	<p>Your story has a place here!<br />
-						  		Set your story as Published, and push it to the cloud.<br />
-						  		Then wait to see what happens.
-
-						  		<br/><br/>
-						  		Your story it's private by default.<br />You can keep it that way.
-						  		
-						  		</p>
-						  	<img className={'imgnoOpenFiles'} src={pubs} />
-						  </div>
-
-						  	<div className="parallax-section" style={{marginBottom: 100}}>
-						  	<h1>Use tags to<br />scale up<div className="parallax-counter"><span>6</span></div></h1>
-						  	<p>
-						  		Whether it's science, math, fiction, novels, suspense, ...<br />
-						  		Add it to the book. <br />
-						  		If you publish your story,<br />those tags will help you scale<br />through Newt.
-						  		</p>
-						  	<img className={'imgnoOpenFiles'} src={svg8} />
-						  </div>
-						  <div className="parallax-section" style={{marginBottom: 100}}>
-						  	<h1>Get<br />Inspired<div className="parallax-counter"><span>7</span></div></h1>
-						  	<p>We understand that in order to write nice<br />first you have to think nice.<br /><br />
-						  		We can fill a lot of libraries full of books<br />of things you don't know.
-
-						  		<br/><br/>
-						  		Actually, we did. And it's open for everyone.</p>
-						  	<img className={'imgnoOpenFiles'} src={svg7} />
-						  </div>
-
-						 
-						</div>
-				  		{/*<div style={{width: '60%', textAlign: 'center', paddingTop: 70, height: 130}}>
-				  			<h1>Immersive thinking</h1>
-				  		<p>Create books and edit properties and parts in this place.<br />
-				  			Push what you've had write to the cloud, pull it from your phone to keep writing.</p>
-				  			</div>
-				  		<img className={'imgnoOpenFiles'} src={svg1} />*/}
-				  	</div>
-				  	}
+				 
 				  	
 				  	
 				  </div>
 
-		      </SplitterLayout>
+
 
 		</div>
 	  	);
 	 } else {
 	 	return (
-	  	<div style={{backgroundColor: '#ff7575', width: '100%', height: '100%'}}>
-	  		Loading
-
+	  	<div style={{backgroundColor: '#111', width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+	  		<object type="image/svg+xml" data={svglogo} style={{height: 50}}>
+			                    Your browser does not support SVG
+			                  </object>
 		</div>
 	  	);
 	 }
@@ -2194,7 +2348,7 @@ export default class SignedIn extends Component<Props> {
 	}
 }
 
-class TabPanel extends React.Component {
+class TabPanel extends PureComponent {
   constructor(props) {
     super(props);
 
@@ -2207,8 +2361,9 @@ class TabPanel extends React.Component {
   }
 
 
-  _handleClick = async(index) => {
-    	await this.props.onTabChange(index);
+  _handleClick = (index) => {
+
+   	return this.props.onTabChange(index);
   }
 
   _renderTabs() {
@@ -2238,7 +2393,13 @@ class TabPanel extends React.Component {
   }
   
   _renderTabContent() {
-  	return this.props.children[this.props.selectedTab].props.children;
+  	return (this.props.children[this.props.selectedTab] && this.props.children[this.props.selectedTab].props) &&
+          	this.props.children[this.props.selectedTab].props.children;
+  }
+
+
+  _addNewTab = () => {
+  	this.props.addNewTab()
   }
 
   render() {
@@ -2251,11 +2412,22 @@ class TabPanel extends React.Component {
         <div className={["tab-panel__header", "noselect"].join(" ")}>
         	<div className="tab-panel__header_overflow">
           		{this._renderTabs()}
+          		<div className={'tab'} style={{width: 30}} onClick={() => this._addNewTab()}>
+			        <div className={["tab__label", "truncate"].join(" ")}>
+			        	<Icon
+							  name='plus'
+							  font='Feather'
+							  color='rgba(0, 0, 0, 0.42)'
+							  size={15}
+							  style={{marginRight: 3, marginLeft: -12, marginTop: -1}}
+							/>
+			        </div>
+			      </div>
+
           	</div>
         </div>
         <div className="tab-panel__content">
-          { (this.props && this.props.children[this.props.selectedTab] && this.props.children[this.props.selectedTab].props) &&
-          	this.props.children[this.props.selectedTab].props.children
+          { this._renderTabContent()
           }
         </div>
       </div>
@@ -2263,7 +2435,7 @@ class TabPanel extends React.Component {
   }
 }
 
-class Tab extends React.Component {
+class Tab extends PureComponent {
   constructor(props) {
     super(props);
 
@@ -2271,15 +2443,15 @@ class Tab extends React.Component {
   }
 
   _handleClick = () => {
-    this.props.onClick(this.props.index);
+    return this.props.onClick(this.props.index);
   }
 
   render() {
     const tabClassName = this.props.isSelected ? 'tab tab--selected' : 'tab';
 
     return (
-      <span className={tabClassName} onClick={() => this._handleClick()}>
-        <span className="tab__label">
+      <div className={tabClassName} onClick={() => this._handleClick()}>
+        <div className={["tab__label", "truncate"].join(" ")}>
         {
         		this.props.type == 'bulk' && <Icon
 							  name='settings'
@@ -2291,17 +2463,20 @@ class Tab extends React.Component {
         	}
         	{this.props.label.slice(0,15)}
         	
-        	<span className={["tab__close", this.props.isUpdated == true && 'tab__updated'].join(' ')} onClick={() => this.props.closeFile(this.props.id)}>
+        	<span 
+        		className={["tab__close", 
+        			//this.props.isUpdated == true && 'tab__updated'
+        			].join(' ')} onClick={() => this.props.closeFile(this.props.id)}>
         	<Icon
-				name='ios-close-circle-outline'
+				name='ios-close'
 				font='Ionicons'
-				color={this.props.isUpdated == true ? '#fff' : '#111'}
-				size={10}
+				color={this.props.isUpdated == true ? '#c74e4d' : '#999'}
+				size={14}
 				style={{marginLeft: 1}}
 			/>
 			</span>
-        </span>
-      </span>
+        </div>
+      </div>
     );
   }
 }
