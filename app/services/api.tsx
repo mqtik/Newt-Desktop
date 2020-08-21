@@ -2185,9 +2185,9 @@ k
       },
       saveLocalUser: async(data) => {
         let d = data;
-        console.log("to save user!", data)
+       // console.log("to save user!", data)
         let n = await(this.ApplicationSettings.put(d, {force: true}));
-        console.log("to save user put!", n)
+        //console.log("to save user put!", n)
         let g = await(this.ApplicationSettings.get(d._id))
 
         return g;
