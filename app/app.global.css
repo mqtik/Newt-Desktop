@@ -3663,3 +3663,23 @@ input[type='number']::-webkit-outer-spin-button {
     margin-top: 30px;
     margin-bottom: 30px;
 }
+
+footer {
+  width: 100%;
+    text-align: center;
+}
+footer ul {
+  list-style: none;
+    display: inline-flex;
+}
+footer ul li {
+  padding: 10px;
+}
+.footerSignedOut li a {
+  color: #444;
+}
+.footerSignedOut {
+
+    bottom: 0;
+    position: absolute;
+}

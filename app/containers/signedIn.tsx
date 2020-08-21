@@ -364,7 +364,7 @@ export default class SignedIn extends Component<Props> {
 	$init = async() => {
 
 		let k = await(Remote.Auth().getLoggedUser());
-		console.log("gt loggedusre!",k)
+
 
 		if(k == false){
 			toast("Your session has expired. Sign in again.", { autoClose:6000 })
@@ -1860,7 +1860,7 @@ export default class SignedIn extends Component<Props> {
 	    		let f = await(Remote.Work().drafts().search(this.state.searchTyping));
 	    		this.state.works.rows = f;
 	    		this.state.works.total_rows = f.length;
-			    	console.log("f!!!", f)
+
 			    	if(this.state.works && this.state.works.rows){
 			    		this.setState({
 				      	works: this.state.works
@@ -1879,7 +1879,7 @@ export default class SignedIn extends Component<Props> {
 
 	  cleanSearch = async() =>  {
 	  	let f = await(Remote.Work().drafts().all());
-	  	console.log("c len serch!", f)
+
 	    		this.setState({
 			      	works: f,
 			      	searchTerm: null,
@@ -2375,7 +2375,7 @@ export default class SignedIn extends Component<Props> {
 
 	}
 	toggleDarkMode = () => {
-		console.log("toggle dark mode!", this.state.isDarkMode)
+
 		this.setState({
 			isDarkMode: !this.state.isDarkMode
 		})

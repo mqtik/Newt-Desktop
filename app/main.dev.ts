@@ -9,7 +9,7 @@
  * `./app/main.prod.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
@@ -100,6 +100,15 @@ const createWindow = async () => {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show()
   })
+
+  const openExternalLinksInOSBrowser = (event, url) => {
+            if (url.match(/.*localhost.*/gi) === null && (url.startsWith('http:') || url.startsWith('https:'))) {
+                event.preventDefault();
+                shell.openExternal(url);
+            }
+        };
+mainWindow.webContents.on('new-window', openExternalLinksInOSBrowser);
+mainWindow.webContents.on('will-navigate', openExternalLinksInOSBrowser);
 
   const menuBuilder = new MenuBuilder(mainWindow);
   menuBuilder.buildMenu();

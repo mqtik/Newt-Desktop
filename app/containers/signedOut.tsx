@@ -401,6 +401,7 @@ export default class SignedOut extends Component<Props> {
 	render(){
 
 		return (
+			<div>
 			<div className={'signedOutRenderContainer'}>
 				<BackgroundCovers />
 
@@ -468,7 +469,16 @@ export default class SignedOut extends Component<Props> {
 					  </div>
 					</div>
 
+
 			</div>
+			<footer className="footerSignedOut">
+					<ul>
+						<li><a href="https://newt.to/download" target="_blank"> Mobile</a></li>
+						<li><a href="https://newt.to/help" target="_blank">Help</a></li>
+						<li><a href="https://newt.to/support" target="_blank">Read</a></li>
+					</ul>
+				</footer>
+				</div>
 			);
 	}
 }

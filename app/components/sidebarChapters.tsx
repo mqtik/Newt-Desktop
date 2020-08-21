@@ -178,7 +178,7 @@ export default class SidebarChapters extends Component<Props> {
 			k.position = i;
 			return k;
 		})
-		__DEV__ && console.log("nc!", nc)
+
 		this.props.onMoveChapters(nc);
 
 		return;
@@ -210,9 +210,9 @@ export default class SidebarChapters extends Component<Props> {
 	  		<div style={{padding: 0,height: 58}} key={Math.random()}>
 				  						<ContentLoader 
 															    speed={2}
-															    width={490}
+															    width={580}
 															    height={160}
-															    viewBox="0 0 535 160"
+															    viewBox="0 0 580 160"
 															    backgroundColor="#333"
 															    foregroundColor="#444"
 															  >

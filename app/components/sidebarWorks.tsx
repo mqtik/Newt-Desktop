@@ -53,7 +53,7 @@ class BookPerOne extends Component<Props> {
 
 	openWork = async(key) => {
 		let c = await this.props.openWork(key)
-		console.log("oopennchap!",c)
+
 		this.setState({
 			opened: true,
 			chapters: c
@@ -259,7 +259,7 @@ export default class SidebarWorks extends Component<Props> {
 
 
 
-		console.log("oopennchap!",c)
+
 		this.setState({
 			chapters: c
 			})
@@ -274,7 +274,7 @@ export default class SidebarWorks extends Component<Props> {
 	}
 
 	selectBook = (e, book) => {
-		console.log("select book!", e.target.value, book)
+
 
 		this.props.onSelectBook(book);
 	}
@@ -314,9 +314,6 @@ export default class SidebarWorks extends Component<Props> {
 	handleScroll = e => {
 
 	    console.log(this.workScroll.scrollTop / 100);
-	    console.log("scroll!! scrolltop", this.workScroll.scrollTop)
-		 console.log("scroll!! innerheight", this.workScroll.clientHeight)
-		 console.log("scroll!! sidebar", this.workScroll.offsetHeight)
 	  };
 
 	toggleSettings = (key) => {
@@ -331,7 +328,7 @@ export default class SidebarWorks extends Component<Props> {
 		}
 
 
-		console.log("key toggle", openedFiles[openIndex])
+
 
 		this.setState({
 			openedFiles: openedFiles
@@ -371,7 +368,7 @@ export default class SidebarWorks extends Component<Props> {
 	          isReady: true 
 	        });
 
-	    console.log("open chapters sync!", this.props)
+
 
 	    return chapters;
 
@@ -617,7 +614,7 @@ export default class SidebarWorks extends Component<Props> {
 			    closeOnDocumentClick
 			  >
 
-			     <div><div class="modalClose" onClick={() => this.closeWork()}><Icon
+			     <div><div className="modalClose" onClick={() => this.closeWork()}><Icon
 											  name='close'
 											  font='MaterialCommunityIcons'
 											  size={25}

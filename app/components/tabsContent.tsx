@@ -52,7 +52,7 @@ class Importer extends Component<Props> {
 	}
 
 	onDropEpubs = (files) => {
-		console.log("on drop ep")
+
 		this.setState({ isImporting: true }, () => {
 
 			setTimeout(() => {
@@ -64,7 +64,7 @@ class Importer extends Component<Props> {
 	start = async(files) => {
 
 		let e = await this.props.onDropEpubs(files);
-			console.log("set epub!", e)
+
 			
 			setTimeout(() => {
 				this.setState({
@@ -390,7 +390,7 @@ export default class TabsContent extends Component<Props> {
 																			  // style={{}}
 																			/>
 													<span>
-												    	Dark mode
+												    	Dark Mode
 												  	</span>
 												</li>
 								            	<li onClick={() => this.props.onSignOut()}>
@@ -402,7 +402,7 @@ export default class TabsContent extends Component<Props> {
 																			  // style={{}}
 																			/>
 
-													<span>Sign out</span>
+													<span>Sign Out</span>
 												</li>
 								            </ul>
 							            </div>
