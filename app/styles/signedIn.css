@@ -1,0 +1,85 @@
+.newtSidebar {
+  background-color: #232323;
+  height: 100%;
+  color: #c1c1c1;
+  overflow-x: hidden;
+}
+
+.newtContainer {
+  height: 100%;
+  color: #000;
+  position:relative;
+  overflow-x: hidden;
+}
+
+.dark-mode-checkbox:checked ~ .newtContainer {
+
+}
+.sidebarTop {
+	height: 30px;
+    /* padding-top: 10px; */
+    position: fixed;
+    z-index: 1;
+    width: 100%;
+    background-color: rgba(82, 82, 82, 0.29);
+    backdrop-filter: saturate(180%) blur(20px);
+    border-bottom:1px solid rgba(239, 239, 239, 0.05);
+    padding: 25px 7px 7px 7px;
+
+    display: -webkit-box;
+    flex-direction: column;
+    overflow: hidden;
+}
+.sidebarButtonCircle:nth-of-type(2) {
+	margin-left: 5px;
+}
+.sidebarButtonCircle:nth-of-type(3) {
+	margin-left: 5px;
+}
+.sidebarButtonCircle {
+	width: 29px;
+    height: 27px;
+    max-height: 27px;
+    background-color: rgba(234, 234, 234, 0.15);
+    border-radius: 50%;
+    text-align: center;
+    padding-top: 2px;
+}
+.sidebarButtonCircleAvatar {
+	width: 29px;
+    height: 27px;
+    max-height: 27px;
+    background-color: #eaeaea;
+    border-radius: 50%;
+    text-align: center;
+    padding-top: 2px;
+    background-size: cover;
+    background-repeat: no-repeat;
+    margin-left: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.sidebarUsername {
+	height: 30px;
+	padding: 5px 0px 0 15px;
+	font-weight: 700;
+    text-align: left;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.sidebarChapters {
+	width: 100%;
+	background-color: transparent;
+	padding-top: 63px;
+}
+.sidebarButtonCircle span {
+	margin-top: 10px;
+    vertical-align: -webkit-baseline-middle;
+}
+
+.newTabNavbar {
+  position: fixed;
+    top: 55px;
+    left: 17px;
+    z-index: 999;
+}

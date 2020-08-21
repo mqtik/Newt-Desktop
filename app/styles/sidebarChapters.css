@@ -1,0 +1,39 @@
+.sidebarWorkListRowInfo {
+	float: left;
+	width: 200px;
+}
+.sidebarWorkListRowActions {
+
+}
+.sidebarWorkListRowStatus {
+
+}
+.sidebarWorkListRowTitle {
+
+}
+
+.sidebarWorkChapterList {
+	cursor: pointer;
+	height: 18px;
+    margin-bottom: 5px;
+
+    /* width: 93%; */
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0.59);
+    border-radius: 10px;
+    font-weight: 600;
+    font-family: Open Sans;
+        min-width: 100px;
+    display: inline-flex;
+    width: 100%;
+    justify-content: space-between;
+    height: 46px;
+
+}
+.titleChapter {
+    width: 80%;
+    white-space:nowrap;
+    min-width: 150px;
+    height: 30px;
+    padding: 12px;
+}
