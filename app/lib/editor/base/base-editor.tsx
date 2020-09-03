@@ -3,6 +3,8 @@ import * as React from 'react'
 
 import EditorJS, { OutputData, BlockToolData, API } from '@editorjs/editorjs'
 import Paragraph from '@editorjs/paragraph'
+import DragDrop from 'editorjs-drag-drop';
+
 
 export interface EditorJsProps {
   enableReInitialize?: boolean
@@ -78,7 +80,9 @@ class EditorNewt extends React.PureComponent<Props> {
     this.instance = new EditorJS({
       tools: extendTools,
       holder: 'editor-js',
-
+      onReady: () => {
+        new DragDrop(this.instance);
+      },
       ...(onChange && {
         onChange: this.handleChange
       }),

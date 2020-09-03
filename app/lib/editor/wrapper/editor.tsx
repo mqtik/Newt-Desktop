@@ -11,10 +11,12 @@ import EditorNewt from '../base/base-editor';
 
 import Embed from '@editorjs/embed'
 import Table from '@editorjs/table'
-import Paragraph from '@editorjs/paragraph'
+import Paragraph from 'editorjs-paragraph-with-alignment'
 import List from '@editorjs/list'
 import Warning from '@editorjs/warning'
 import Code from '@editorjs/code'
+import CodeBox from '@bomdi/codebox'
+
 import LinkTool from '@editorjs/link'
 import Image from '@editorjs/image'
 import Raw from '@editorjs/raw'
@@ -25,6 +27,10 @@ import CheckList from '@editorjs/checklist'
 import Delimiter from '@editorjs/delimiter'
 import InlineCode from '@editorjs/inline-code'
 import SimpleImage from '@editorjs/simple-image'
+import Gist from 'editorjs-github-gist-plugin';
+import SocialPost from 'editorjs-social-post-plugin';
+import Underline from '@editorjs/underline';
+import DragDrop from 'editorjs-drag-drop';
 import API from '../../../services/api.tsx';
 
 const {clipboard} = require('electron')
@@ -48,14 +54,17 @@ var loadBase64Image = function (url) {
 
 const Remote = new API({url: 'image'})
 export const EDITOR_JS_TOOLS = {
+
   logLevel: 'ERROR',
+  underline: Underline,
   embed: {
       class: Embed,
       inlineToolbar: true,
       config: {
         services: {
           youtube: true,
-          coub: true
+          coub: true,
+          codepen: true
         }
       }
     },
@@ -83,6 +92,14 @@ export const EDITOR_JS_TOOLS = {
     class:Code,
     inlineToolbar: true
   },
+  codeBox: {
+      class: CodeBox,
+      config: {
+        //themeURL: 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.18.1/build/styles/dracula.min.css', // Optional
+        //themeName: 'atom-one-dark', // Optional
+        useDefaultTheme: 'light' // Optional. This also determines the background color of the language select drop-down
+      }
+    },
   linkTool: {
     class:LinkTool,
     inlineToolbar: true,

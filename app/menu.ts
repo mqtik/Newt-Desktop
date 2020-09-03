@@ -169,23 +169,17 @@ export default class MenuBuilder {
           }
         },
         {
-          label: 'Documentation',
+          label: 'Mobile',
           click() {
             shell.openExternal(
-              'https://github.com/electron/electron/tree/master/docs#readme'
+              'https://newt.to/download'
             );
           }
         },
         {
-          label: 'Community Discussions',
+          label: 'Support',
           click() {
-            shell.openExternal('https://www.electronjs.org/community');
-          }
-        },
-        {
-          label: 'Search Issues',
-          click() {
-            shell.openExternal('https://github.com/electron/electron/issues');
+            shell.openExternal('https://newt.to/support');
           }
         }
       ]

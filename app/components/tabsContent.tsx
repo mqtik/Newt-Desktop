@@ -381,6 +381,20 @@ export default class TabsContent extends Component<Props> {
 							                onClick={() => this.setState({ isPopoverUserOpen: !this.state.isPopoverUserOpen })}
 							            >
 							            	<ul className={'popoverNewt'}>
+							            		<li>
+							            			<a href={"https://newt.to/"+this.props.rootUser.name} target="_blank">
+									            		<Icon
+																				  name='account-off'
+																				  font='MaterialCommunityIcons'
+																				  color='#fff'
+																				  size={18}
+																				  // style={{}}
+																				/>
+														<span>
+													    	Profile
+													  	</span>
+												  	</a>
+												</li>
 							            		<li onClick={() => this.props.toggleDarkMode()}>
 								            		<Icon
 																			  name='account-off'

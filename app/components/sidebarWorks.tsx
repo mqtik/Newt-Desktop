@@ -490,6 +490,18 @@ export default class SidebarWorks extends Component<Props> {
 													/>
 								            		<span>Settings</span>
 								            	</li>
+								            	<li>
+								            		<a href={"https://newt.to/"+key._id.replace(/-/g, '/')} target="_blank">
+									            		<Icon
+														  name='web'
+														  font='MaterialCommunityIcons'
+
+														  size={18}
+														  // style={{}}
+														/>
+									            		<span>Web</span>
+								            		</a>
+								            	</li>
 								            </ul>
 				     </div>
 				    
